@@ -1,7 +1,6 @@
 # Thresholds
 A town's price thresholds are updated by the `update_town_price_thresholds` function at `0x00528070` every time the town ticks.
 
-The calculation is partially understood, but some aspects are still to be determined.
 The following pseudocode denotes what is known:
 ```rust
 fn update_town_price_thresholds(town) {
@@ -134,17 +133,21 @@ fn update_town_price_thresholds(town) {
     }
     */
 
-    // Set t2 and t3 except for bricks and weapons
+    // Set t2 and t3 except for bricks and weapons: t2 adds ten days of the town's
+    // production array (town+0x490, raw units/day; verified in-game across several
+    // towns via t2 - t1). The array is nonzero exactly for the wares the town
+    // produces, but its magnitude does NOT match the market hall's fixed weekly
+    // production - what exactly it measures is still open.
     for i in 0..19 {
-        thresholds[i][2] = thresholds[i][1] + 10 * town.unidentified_array[i];
+        thresholds[i][2] = thresholds[i][1] + 10 * town.daily_production[i];
         thresholds[i][3] = thresholds[i][2] + thresholds[i][0];
     }
 
     // Pitch and bricks production bonus
-    if town.production[WareId::Pitch] > 0 {
+    if town.daily_production[WareId::Pitch] > 0 {
         thresholds[WareId::Pitch][3] += 3600;
     }
-    if town.production[WareId::Bricks] > 0 {
+    if town.daily_production[WareId::Bricks] > 0 {
         thresholds[WareId::Bricks][3] += 160000;
     }
 
@@ -156,8 +159,8 @@ fn update_town_price_thresholds(town) {
 
     // Bricks t2 and t3
     if has_effective_bricks_production {
-        thresholds[WareId::Bricks][2] = thresholds[WareId::Bricks][1] + town.unidentified_array[WareId::Bricks];
-        thresholds[WareId::Bricks][3] = thresholds[WareId::Bricks][1] + 2 * town.unidentified_array[WareId::Bricks];
+        thresholds[WareId::Bricks][2] = thresholds[WareId::Bricks][1] + town.daily_production[WareId::Bricks];
+        thresholds[WareId::Bricks][3] = thresholds[WareId::Bricks][1] + 2 * town.daily_production[WareId::Bricks];
     } else if thresholds[WareId::Bricks][2] > 2 * thresholds[WareId::Bricks][1] {
         // TODO: can this every be true?
         thresholds[WareId::Bricks][2] = 2 * thresholds[WareId::Bricks][1];

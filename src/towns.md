@@ -155,7 +155,7 @@ The following fields have been identified:
 000003CC field_3CC dd ?
 000003D0 field_3D0_wares_copy dd 24 dup(?)
 00000430 field_430_unknown_wares_data dd 24 dup(?)
-00000490 field_490_weird_prods dd 24 dup(?)
+00000490 field_490_daily_production dd 24 dup(?) ; raw units/day; t2 = t1 + 10 days of this; nonzero exactly for the wares the town produces, but does not match the market hall's fixed weekly production
 000004F0 field_4F0_consumption_data consumption_data 24 dup(?)
 00000670 field_670 dd ?
 00000674 field_674 dd ?

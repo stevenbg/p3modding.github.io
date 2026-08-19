@@ -198,3 +198,8 @@
 0000064C     int field_64C;
 00000650 };
 ```
+
+`field_19_hometown_index` is the town shown as "Home town" on the Personal screen: the
+town holding the merchant's home office. It changes when the player moves the home
+office and is distinct from the birth town shown in the same screen's date-of-birth
+line.

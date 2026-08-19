@@ -82,7 +82,7 @@ The following fields have been identified:
 00000128     int field_128;
 0000012C     int field_12C;
 00000130     __int16 field_130;
-00000132     unsigned __int16 field_132;
+00000132     unsigned __int16 field_132_route_stop_index; // current stop in the trade route stop pool, see Trade Routes (.rou)
 00000134     __int16 field_134_status;
 00000136     char field_136;
 00000137     char field_137;

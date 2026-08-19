@@ -34,3 +34,34 @@ The "direction" of a transaction is encoded in the price and amount:
 |Negative|Positive|Town -> Ship|
 
 The "Max" amount is represented by `1_000_000_000` for both barrel and bundle wares.
+Amounts are stored in raw units: display units times the ware scaling (bundles 2000, barrels 200).
+
+## Action Byte
+The action byte combines the stop's repair flag with a first-stop marker:
+
+|Value|Meaning|
+|-|-|
+|0x00|repair setting "X"|
+|0x01|repair setting "R" (repair at this stop)|
+|0x09|repair setting "-"|
+|0x04|OR'ed onto the route's logical first stop|
+
+## Applied Routes at Runtime
+Loaded routes live in a global pool of the same 220-byte stop records, prefixed by a
+2-byte next-stop index in the record's first two ("Unused") bytes:
+
+- `[0x006DD72C]` = pool base, `[0x006DD72A]` (u16) = pool record count.
+- A route is a circular chain of records through the next-stop indices; the stop
+  carrying action bit `0x04` is the logical first stop.
+- `ship+0x132` (u16) = the pool index of the ship's current route stop; it advances as
+  the route runs.
+
+## Loading Path
+The game loads a route file through the loader at `0x004D5EE0` (thiscall,
+`this = 0x006DD728`): it takes a pointer to an MFC-style string object holding the base
+name and forms the path `save\AutoRoute\<name>.rou` itself, returning the decompressed
+stop buffer. To attach the route to a ship, `transfer_loaded_traderoute` (`0x005492D0`,
+thiscall on the operations struct `0x006DF2F0`) reads the buffer pointer from
+`operations+0x930` and the target ship index from `operations+0x934`, validates the
+stops, allocates pool records, attaches them to the ship's convoy, and frees the buffer
+with the game's own allocator.

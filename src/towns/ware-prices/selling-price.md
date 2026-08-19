@@ -45,6 +45,8 @@ and \\(d\_{trade\\_difficulty}\\) is defined as:
 |1 (normal)|2.0|
 |2 (high)|1.8|
 
+The mapped value is held as a float at `0x006DE43C`, field `+0x64` of the static settings class at `0x006DE3D8` that `get_sell_price` callers pass as `this`.
+
 
 ## Example
 Let's assume we sell pig iron to a town with the following thresholds:
