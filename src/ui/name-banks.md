@@ -16,9 +16,13 @@ keep pointing at the blob's first string. Further writers at `0x00511E76`,
 `0x00511EB1`, `0x005127FC` and `0x0051288C` repopulate banks at runtime from a
 cache object.
 
-Directly after bank C sits the full town-name table object at `0x006DDAA0`, whose
-pointer array at `+0x8` covers all 40 towns; `0x00512B20` (thiscall(this =
-`0x006DDAA0`, town)) returns a town's name and is what the text formatters use.
+Directly after bank C, at `0x006DDAA8`, sit 40 consecutive town-name pointers
+covering all towns of the full map - fields of a larger name-registry object at
+`0x006DDAA0`. That object's getter `0x00512B20` (thiscall(this, id)) is NOT a
+town lookup: it resolves ids through two offset-table sections (`this+0xC8`/
+`+0xCC` into blobs at `this+0xB4`/`+0xB8`, section limits `this+0xD8`/`+0xDA`)
+and returns dynamic names - id 15 resolved to a ship name in testing. Town names
+by savegame town index come from bank C.
 
 Bank consumers index the 40 slots directly, e.g.
 `mov eax, [index*4 + 0x006DDA00]` - usually with an index that is a genuine town

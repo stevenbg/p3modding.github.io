@@ -16,17 +16,21 @@ command's operands (`cmd[n]` below) and the script variables (`var[n]`):
 |descriptor (`+0x8`)|`malloc(0x10)`, filled from `cmd[3..6]` and further variables|
 |text (`+0xC`)|`malloc(0x1000)`, the formatted letter body|
 
-The scripted letter types `0x3C..0x40` are the ones the letters list treats
-specially (payload-based icon instead of the type icon table `0x006A52D0`).
+The scripted letter types `0x3C..0x40` are the ones the letters list and the
+[notification tickers](../ui/notification-tickers.md) treat specially: their
+display name comes from the letter-text payload instead of the type-name string
+table at `0x006A52D0`.
 
 ## Text Formatting
 The letter body is built by a `%`-substitution engine inside the same
 interpreter: it copies the template text, expanding placeholders from replacement
-string tables (e.g. `0x006C3040`) and game data. Town names are resolved through
-the helper `0x00512B20` against the full town-name table (see
-[Name Banks](../ui/name-banks.md)), so the letter text names towns correctly even
-when the message's town byte does not hold a town - the two come from different
-places.
+string tables (e.g. `0x006C3040`) and game data - among them the dynamic-name
+resolver `0x00512B20` (ship and similar names, see
+[Name Banks](../ui/name-banks.md)). The names in the letter text are resolved
+from their own sources at creation time, so the text is correct even when the
+message's town byte does not hold a town - the two come from different places.
+Descriptor`+0x0` holds the finished text's length (the creation code tracks the
+raw write position there while building), which bounds the text.
 
 ## Sending
 The handler ends in [add_message](../letters.md) calls: to a single recipient

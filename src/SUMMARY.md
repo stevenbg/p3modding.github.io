@@ -69,6 +69,7 @@
     - [Auto Trade Goods Dialog](./ui/auto-trade-goods-dialog.md)
     - [Trade Route Panel](./ui/trade-route-panel.md)
     - [Personal Letters Window](./ui/personal-letters-window.md)
+    - [Notification Tickers](./ui/notification-tickers.md)
     - [Name Banks](./ui/name-banks.md)
 - [Letters](./letters.md)
     - [Scripted Letters](./letters/scripted-letters.md)

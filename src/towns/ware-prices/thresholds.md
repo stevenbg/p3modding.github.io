@@ -136,11 +136,16 @@ fn update_town_price_thresholds(town) {
     // Set t2 and t3 except for bricks and weapons: t2 adds ten days of the town's
     // production array (town+0x490, raw units/day; verified in-game across several
     // towns via t2 - t1). The array holds NOMINAL production at full utilization:
-    // it is nonzero exactly for the wares the town produces and does not react to
-    // facility staffing, while the market hall window shows the actual
-    // staffing-scaled output (verified: halving a sawmill's utilization halved the
-    // window's number but not the array). Thresholds therefore anchor to what the
-    // town COULD produce, not to what it currently does.
+    // it is nonzero exactly for the wares the town produces and ignores facility
+    // staffing completely, while the market hall window shows the actual
+    // staffing-scaled output (verified: dropping a sawmill to 50% and then 0%
+    // utilization halved and then zeroed the window's number; the array never
+    // moved). Thresholds therefore anchor to what the town COULD produce, not to
+    // what it currently does - with a tradeable consequence: building production
+    // facilities and leaving them unstaffed still deepens t2 (and t3), stretching
+    // the price curve's oversupply segment, so the town tolerates much larger
+    // stockpiles of that ware before its prices collapse toward the floor. Every
+    // merchant's facilities count, AI-owned included.
     for i in 0..19 {
         thresholds[i][2] = thresholds[i][1] + 10 * town.daily_production[i];
         thresholds[i][3] = thresholds[i][2] + thresholds[i][0];

@@ -35,6 +35,6 @@ shows a wrong town, shows nothing, or crashes the game, depending on the value i
 hits - the [patrol letter crash](../bugs/patrol-letter-crash.md).
 
 The unread flag selects the row color: black (`0xFF000000`) for unread, brown
-(`0xFF5A2406`) for read. The scripted letter types `0x3C..0x40` derive their row
-icon from the message's `+0xC` payload; other types index the icon table at
-`0x006A52D0` by type.
+(`0xFF5A2406`) for read. The middle column is the message's type name from the
+string table at `0x006A52D0` (indexed by type); the scripted letter types
+`0x3C..0x40` show their letter-text payload (`+0xC`) instead.
