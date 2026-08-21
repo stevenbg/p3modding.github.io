@@ -17,9 +17,15 @@ the render DLL's text draw, which dereferences it without any guard
 
 The [letter script](../letters/scripted-letters.md) creation command stores the
 low byte of a script variable as the town byte, unvalidated (`0x004ED4E4`), and
-the patrol/escort letter templates pass a variable that is not a town index -
-observed bytes include 40, 95, 228 and 255. Drawing such a row reads past the
-bank into unrelated globals, and the outcome depends on the value it hits:
+the patrol script asks it for a variable that does not exist: command 37 of
+`patrouille.p2m` - the "Patrol destination" letter - names **variable 131** in a
+script that declares 25 variables (see
+[Mission Scripts](../letters/mission-scripts.md)). The handler indexes the
+variable array with that byte regardless, reading 424 bytes past its end, so the
+town byte is whatever heap data follows the array - observed bytes include 40, 95,
+228 and 255. It is the only out-of-range letter town variable in any of the game's
+94 script files. Drawing such a row reads past the name bank into unrelated
+globals, and the outcome depends on the value it hits:
 
 - ids 40..~81 land in the adjacent full town-name table, producing a genuine but
   wrong town name (typically the first town, "Edinburgh");

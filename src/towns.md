@@ -242,7 +242,8 @@ The following fields have been identified:
 00000820 field_820 dd ?
 00000824 field_824_current_ship_level db 4 dup(?)
 00000828 field_828_always_zero db 4 dup(?)
-0000082C field_82C dd ?
+0000082C field_82C dw ?
+0000082E field_82E_auto_trader_chain_head dw ? ; head of the town's auto-trader chain (records linked via their field_0, ended by an out-of-range index; 0xFFFF = empty, sentinel write 0x525F08). A hireable tavern captain is a chain record with field_8 <= 0x20 and merchant 0xFF - the captain resolver 0x5269A0(town, merchant) walks the chain applying exactly that, preferring a captain the asking merchant employs; the sibling resolver 0x5261D0 does the same for the town's pirate captain (field_8 > 0x20, one per town)
 00000830 field_830 dd ?
 00000834 field_834 db ?
 00000835 field_835 db ?

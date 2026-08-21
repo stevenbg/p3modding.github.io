@@ -98,3 +98,42 @@ The following fields have been identified:
 00000160     char field_160_ship_name[32];
 00000180 };
 ```
+
+## Iterating One Merchant's Ships
+
+`field_4_next_ship_of_merchant` chains every ship of one owner, and the head of that
+chain is `+0xE` of the merchant record. The merchant array is at `game_world + 0x78`
+with stride `0x650`; the accessor `0x005303C0` (thiscall on the game world, one
+argument) computes `[this+0x78] + index * 0x650`.
+
+The game's per-merchant ship census at `0x004F0AB1` walks it: fetch the merchant
+record, take `+0xE`, then follow `+0x4` while the index stays below the ship count at
+`[0x006DD894]`. Iterating one player's fleet this way costs his ship count rather than
+the world's - worth having when a late game holds a thousand ships.
+
+## Ship Status
+
+`field_134_status` takes values from `0` to at least `0x15`. Two of its classes are
+established, and the game itself tests for exactly them side by side in the
+per-merchant ship census at `0x004F0B02`/`0x004F0B11`/`0x004F0B26`:
+
+|Test|Meaning|
+|-|-|
+|`status <= 3`|the ship is at the town in `field_39_last_town`, not at sea|
+|`status == 0xF`|merchant vessel at sea|
+
+Within the in-port family, `0` is a ship lying in the port and `3` is set while it
+enters one - at `0x004E13FA`, which also clears the convoy fields `+0x6`/`+0x8` and ORs
+`0x60` into the flags at `+0x3C`. `field_39_last_town` already names the town at that
+point, and this is the state in which the town becomes enterable: a save with one ship
+sailing to Rostock showed the ship flipping from `0xF` to `3` exactly when Rostock's
+town view and tavern became reachable, still before docking.
+
+Nothing town-side marks that transition. A byte-exact snapshot of all 24 town structs
+taken while the ship was at sea, diffed the moment Rostock became enterable, shows no
+change at all in Rostock (the other towns differ only in economy fields) - so a town
+carries no "enterable" flag and no list of the ships present. Ship status is the
+whole answer.
+
+`0x12` is an AI pirate vessel at sea; `mod-scrollmap-render-all-ships` draws exactly
+`0xF` and `0x12`.

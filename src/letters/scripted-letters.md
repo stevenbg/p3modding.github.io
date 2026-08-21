@@ -5,9 +5,16 @@ commands with byte operands, executed against an array of script variables
 (interpreter object `+0xC`). One of its commands creates and sends a complete
 letter; its handler starts at `0x004ED4A0`.
 
+The scripts themselves are files inside the archives rather than code - see
+[Mission Scripts](./mission-scripts.md) for where they live, the file layout and the
+commands decoded so far.
+
 ## The Create-Letter Command
-The handler allocates a 16-byte [message](../letters.md) and fills it from the
-command's operands (`cmd[n]` below) and the script variables (`var[n]`):
+The command is 12 bytes - `F7` then seven operand bytes and a dword - and the dword is an
+offset into the script's own string pool, where the template is stored as the letter's
+title, its body, and one string per answer button. The handler allocates a 16-byte
+[message](../letters.md) and fills it from the command's operands (`cmd[n]` below) and
+the script variables (`var[n]`):
 
 |Field|Value|
 |-|-|
