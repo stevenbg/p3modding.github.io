@@ -16,6 +16,7 @@ them with the window manager. Many hold their object pointer in a static:
 |`0x006E558C`|town hall window|
 |`0x006E55C0`|shipyard window|
 |`0x006CBA74`|auto trade goods dialog ("Automatic maritime trading")|
+|`0x006E51AC`|local map scene (town view AND sea battle - see below)|
 
 About twenty more statics in the `0x006E5500`-`0x006E55D0` cluster hold further
 windows. The store is not part of the constructor: the constructor takes `this` in ecx
@@ -46,12 +47,54 @@ established way to track a window's open state (used by
 `mod-trading-office-prices-synchronization` and `mod-auto-supply`).
 
 ## Window Manager
-A singleton reachable through `0x004B9730` (`this = 0x006DA5F0`) tracks the open
-windows: `0x004B4E30` registers a window, `0x004B4EB0` deregisters it. Windows
-register their embedded sub-windows too. Calling a window's open method on an
-already-open window registers it twice - it then draws twice and needs two closes -
-so programmatic refreshes must not re-run open (see
+A singleton at `0x006DA5F0` (also reachable through `0x004B9730`) tracks the open
+windows in two containers.
+
+The registration list (`this+0xC0`): `0x004B4E30` registers a window, `0x004B4EB0`
+deregisters it. Windows register their embedded sub-windows too. Calling a window's
+open method on an already-open window registers it twice - it then draws twice and
+needs two closes - so programmatic refreshes must not re-run open (see
 [Trading Office Window](./ui/trading-office-window.md) for the working alternative).
+
+The **window stack** (an MFC-style list at `this+0x4`): `+0xC` points at the TOP
+node, `+0x10` holds the depth, and each node is `{+0x4: link toward the bottom,
++0x8: the window object}`. Windows enter through the push method
+`0x004B90E0(window, arg)` (activates via vtable `+0xD4`/`+0x15C`, inserts the node
+via `0x0064E6FC`) and leave through the remove method `0x004B9150(window)` (finds
+the node from the top, unlinks it via `0x0064E749`, notifies via vtable
+`+0xD4`/`+0x160`) - both thiscall on `0x006DA5F0`, with 47 and 43 call sites.
+
+The stack is what runs the game: the main loop is
+`while (0x004B8A40(this = 0x006DA5F0) != -1)` (the loop itself at `0x004B70C0`),
+and each frame that method pumps messages, updates the
+[frame clock](./basics/time.md#the-frame-clock) and calls the TOP window's vtable
+`+0xF4` (update) and `+0x12C` (`0x004B8B0D`). Scenes - scrollmap, town view, sea
+battle - are window objects on the same stack as the building windows and dialogs,
+so "which scene is the player looking at" is a read of the top node.
+
+## The Local Map Scene
+One window object serves both the town view and the sea battle - what differs is
+the map loaded into it. It is allocated at `0x00424DD4` (0xCBA8 bytes, constructor
+`0x00586FF0`), kept in the static `0x006E51AC`, and carries two vtables: the main
+one at `0x00677998` and a second interface at object `+0x94` (`0x00677990`). The
+main vtable ends around `+0xF8` - unlike the building windows there are no
+close/open slots at `+0x118`/`+0x120`.
+
+Its per-frame update (`+0xF4` = `0x0058B7F0`) drives the entire scene frame -
+simulation, battle AI, the wind (`0x006113C9`), the changed-rect submit
+(`0x004B9650`) - and paces the simulation purely by the
+[frame clock](./basics/time.md#the-frame-clock): neither the game tick nor the
+call count matters (calling the update several times per frame moves nothing).
+
+`+0xC324` holds the loaded map's id. Two loaders write it - `0x0058A733` stores the
+id as given, `0x0058A395` sets bit `0x80` first (`or al,0x80`) - and `0xFF`/`-1`
+mean no map (`0x00589DEE`, `0x0058B590`); the scene's own update starts with
+`and eax,0x7F` and a compare against the town count to pick the town record. The id
+space is only partly mapped, and "is a battle running" is NOT decidable from it:
+towns attacked from the sea fight on the town's own map. The map files
+(`iso/towns/<id>.*`) come as ids 0..30 (the towns), 128..155, 201..205 (five -
+matching `SeaBattleShaderCnt=5` in `scripts/iso.ini`) and 251..255; which class
+means what has not been pinned down.
 
 ## Window Titles
 `0x00420C70` (stdcall, arguments: a string object and the window) draws a window's
@@ -85,7 +128,8 @@ flickering. Making it from the window's update method renders the page cleanly.
 Prose - letter bodies, the tavern's side room, anything that needs word wrap or inline
 symbols - is drawn by a text-layout class of its own (vtable `0x0066E36C`, constructor
 `0x004624D0`). Windows that need it own an instance: the tavern keeps one at
-`window + 0x1608`.
+`window + 0x1608`, the town hall at `window + 0x18C8` (used at `0x005E40C2`, in a
+function that also writes the window's `+0x1930` refresh timestamp).
 
 |Function|Signature|
 |-|-|

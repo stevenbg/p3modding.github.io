@@ -23,6 +23,8 @@
     - [Route Stop Setting Change](./operations/0069-route-stop-setting-change.md)
     - [Trade Route Stop Town Change](./operations/006a-trade-route-stop-town-change.md)
     - [Start Criminal Investigation](./operations/0081-start-criminal-investigation.md)
+    - [Advance Time](./operations/00c4-advance-time.md)
+    - [Set Game Speed](./operations/00c8-set-game-speed.md)
 - [Scheduled Tasks](./scheduled-tasks/0000.md)
     - [Criminal Investigation](./scheduled-tasks/0005-criminal-investigation.md)
     - [Update Shipyard Experience](./scheduled-tasks/0006-update-shipyard-experience.md)
