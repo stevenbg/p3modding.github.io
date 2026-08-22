@@ -19,17 +19,20 @@ longer necessary.
 |Field|Meaning|
 |-|-|
 |`+0xA0`|pointer to the current selection; the selection's first u16 is the selected ship index|
-|`+0xA00`|stop row widget structs, stride `0xE8`; `row + 0x3E` is set while that row's stop is open in the goods dialog via its Goods button|
+|`+0xA00`|Auto trade view: stop row widget structs, stride `0xE8`; `row + 0x3E` is set while that row's stop is open in the goods dialog|
 
 The selection pointer at `+0xA0` is what the panel's own code uses (`0x0048C363`, and
 the route Load handler at `0x0048C92E` when filling `operations + 0x934`), making it a
 reliable source for "which ship is selected" - it works on the world map and in town,
 for own and foreign ships alike.
 
-The panel's Goods button computes the clicked row's stop by walking the pool chain
-from `ship + 0x132` to the first-stop marker and forward by the row number
-(`0x0048C3A1`), then calls the
-[goods dialog](./auto-trade-goods-dialog.md)'s populate (`0x0048C432`).
+Two different buttons mean Goods, and only one of them opens a dialog. At the top of
+the panel a barrel symbol switches the view, alongside Crew and Deck. Inside the
+**Auto trade** view, every stop row carries a button labelled with the word "Goods",
+and that one opens the [goods dialog](./auto-trade-goods-dialog.md) for the stop in
+that row: it resolves the stop by walking the pool chain from `ship + 0x132` to the
+first-stop marker and then forward by the row number (`0x0048C3A1`), and calls the
+dialog's populate at `0x0048C432`.
 
 Route edits made through the panel (town selection, "none", the active checkbox) are
 operations: see [Set Trade Route Active](../operations/0068-set-trade-route-active.md)
