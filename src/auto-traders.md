@@ -65,21 +65,21 @@ with two starting ships each; pirate ships and empty ship slots hold `0xFF`).
 Records never expire; the population circulates between taverns and decks.
 
 ## Captain and Pirate Spawning
-A periodic task (`0x004E2634`, rescheduling itself in date-serial ticks, ~345
-per day) maintains both populations. Per town it records two flags: whether the
-captain resolver finds an unemployed captain (called **with the merchant count
-as the asking merchant** - a value no real merchant has, so only records with
-`field_F_merchant_index` = `0xFF` count), and whether the pirate resolver finds
-a pirate.
+A periodic task (`0x004E2634`, rescheduling itself in [game ticks](./basics/time.md),
+256 per day) maintains both populations. Per town it records two flags: whether
+the captain resolver finds an unemployed captain (called **with the merchant
+count as the asking merchant** - a value no real merchant has, so only records
+with `field_F_merchant_index` = `0xFF` count), and whether the pirate resolver
+finds a pirate.
 
 - **Pirates**: when fewer than 3 towns have a pirate, one is spawned into a
   pirate-less town (`0x00526A50(town, 1)` - the pirate initializer path).
 - **Captains**: at 8 or more unemployed captains the task just reschedules far
-  out (`+0x700` ticks, ~5 days). Below that it compares the count against a
+  out (`+0x700` ticks = 7 days). Below that it compares the count against a
   demand target derived from fleet statistics (`0x00509930` on the ships
   container) and spawns a captain into a captain-less town when the count is at
   or below the target, or below 2 (`0x00526A50(town, 0)`), rescheduling `+0x200`
-  ticks (~1.5 days) after a spawn and `+0x400` otherwise.
+  ticks (2 days) after a spawn and `+0x400` (4 days) otherwise.
 
 No expiry logic exists in the task, and `field_4` is never compared against the
 current date: an unhired captain stays until somebody hires him - including AI

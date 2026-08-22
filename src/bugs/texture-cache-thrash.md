@@ -54,7 +54,13 @@ it replaces only the executable, which knows nothing about the cache.
 
 ## Fix
 [mod-fix-texture-cache-thrash](https://github.com/P3Modding/p3-lib/tree/master/mod-fix-texture-cache-thrash)
-waits for `ddraw_Dll.dll` to be loaded and writes 128 MiB into the budget at
-`ddraw_Dll+0x5F734`. The counter only ever grows to the real working set, so
-actual memory use rises by a few dozen MB at most. The write happens only if the
-`0x01000000` default is found, leaving other builds of the library untouched.
+waits for `ddraw_Dll.dll` to be loaded and writes 48 MiB into the budget at
+`ddraw_Dll+0x5F734` - about 2.5x the measured working set, and the same ballpark
+as the `48000000` GOG tried to configure. The counter only ever grows to what is
+actually in use, so real memory use rises by a few dozen MB at most. The write
+happens only if the `0x01000000` default is found, leaving other builds of the
+library untouched.
+
+A much larger budget is not better: a display mode switch - alt+tab, or opening
+the menu at its own resolution - releases and rebuilds the cached surfaces, so an
+oversized cache makes those switches slower.

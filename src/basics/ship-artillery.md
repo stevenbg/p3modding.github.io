@@ -27,6 +27,28 @@ ShipWeaponId::Bombard => 2000
 ShipWeaponId::Cannon => 1000
 ```
 
+## Combat Power
+Next to the scaling table sits a second, byte-wide table at `0x00672CC8` giving each
+weapon a combat power:
+
+```rust
+ShipWeaponId::SmallCatapult => 9
+ShipWeaponId::SmallBallista => 10
+ShipWeaponId::LargeCatapult => 22
+ShipWeaponId::LargeBallista => 24
+ShipWeaponId::Bombard => 30
+ShipWeaponId::Cannon => 18
+```
+
+Fitting a weapon (`0x0051A4E0`) adds its scaling factor from `0x00672CB4` to the ship's
+`field_11C` - the capacity the guns occupy - and its power from `0x00672CC8` to the
+ship's `field_120`, so `field_120` is the ship's total artillery power. Removing a
+weapon subtracts both. That total is one of the two halves of the fighting strength the
+pirate AI compares before attacking; the other is the crew count in `field_40`.
+
+Two further six-byte tables sit in the same block and are not yet identified:
+`0x00672CC0` = 32, 32, 77, 77, 96, 58 and `0x00672CD0` = 60, 80, 60, 80, 90, 90.
+
 ## Ship Artillery Slots
 A ship's artillery slots are filled with the following enum:
 ```c

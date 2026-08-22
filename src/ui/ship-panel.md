@@ -18,13 +18,27 @@ longer necessary.
 
 |Field|Meaning|
 |-|-|
-|`+0xA0`|pointer to the current selection; the selection's first u16 is the selected ship index|
+|`+0xA0`|pointer to the current selection; its leading u16 is the selected ship index, and nothing after that is written|
 |`+0xA00`|Auto trade view: stop row widget structs, stride `0xE8`; `row + 0x3E` is set while that row's stop is open in the goods dialog|
 
 The selection pointer at `+0xA0` is what the panel's own code uses (`0x0048C363`, and
 the route Load handler at `0x0048C92E` when filling `operations + 0x934`), making it a
 reliable source for "which ship is selected" - it works on the world map and in town,
 for own and foreign ships alike.
+
+The field is cleared to `0` while nothing is selected, so it never points at the
+previous selection. Opening any building window also clears it - the ship is visibly
+deselected - and closing the window selects the same ship again, so the panel selection
+cannot be read while a building window is on screen. The selection object itself is
+heap-allocated and freed when the selection changes (`0x00487E74` frees the old one
+before storing the new pointer), which is why a lingering copy of the pointer must not
+be followed. Only its leading u16 carries meaning: re-selecting the same ship leaves
+different values behind it, matching the high halves of neighbouring heap pointers, so
+the following bytes are uninitialised rather than a type tag. The value behind it is always a **ship** index, never a convoy
+one: selecting a convoy on the map reports the convoy's leader, and picking an
+individual ship out of a convoy reports that ship. (A convoy itself is a `0x3C`-byte
+record in the array at `ships + 0x08`; a ship names its convoy in `ship + 0x08` and the
+members are chained through `ship + 0x06`.)
 
 Two different buttons mean Goods, and only one of them opens a dialog. At the top of
 the panel a barrel symbol switches the view, alongside Crew and Deck. Inside the

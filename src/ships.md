@@ -66,7 +66,7 @@ The following fields have been identified:
 0000003C     char field_3C;
 0000003D     char field_3D;
 0000003E     signed __int16 field_3E_maintenance;
-00000040     unsigned __int16 field_40;
+00000040     unsigned __int16 field_40_crew;
 00000042     unsigned __int16 field_42_captain_index;
 00000044     int field_44_timestamp2;
 00000048     int field_48_maybe_calculated_arrival_timestamp;
@@ -76,7 +76,7 @@ The following fields have been identified:
 000000B4     float field_B4_avg_prices[24];
 00000114     int field_114_payload_buy_sum;
 00000118     int field_118_maybe_used_capacity;
-0000011C     int field_11C_maybe_arty_weight;
+0000011C     int field_11C_equipment_weight;
 00000120     int field_120_arty_stuff;
 00000124     int field_124;
 00000128     int field_128;
@@ -90,7 +90,7 @@ The following fields have been identified:
 0000013A     char field_13A;
 0000013B     char field_13B;
 0000013C     char field_13C_artillery[24];
-00000154     int field_154;
+00000154     int field_154_cutlasses;
 00000158     int field_158;
 0000015C     char field_15C_is_pirate;
 0000015D     unsigned __int8 field_15D;
@@ -98,6 +98,53 @@ The following fields have been identified:
 00000160     char field_160_ship_name[32];
 00000180 };
 ```
+
+## Crew, Cutlasses and the Equipment Weight
+Three fields describe what a ship carries besides cargo, all verified in-game by
+changing one thing at a time and diffing the struct:
+
+|Field|Meaning|
+|-|-|
+|`field_40_crew`|sailors aboard; `0x005184F0` derives the complement as `max(20, capacity/2000 + upgrade_level * class_factor)`, the class factors being 3, 5, 8, 10 (first dword of the per-class blocks at `0x0066E030`, stride `0x18`). `capacity/2000` is the capacity in loads, so a ship's crew is roughly its load capacity.|
+|`field_154_cutlasses`|cutlasses aboard (they are not [ship weapons](./basics/ship-artillery.md))|
+|`field_11C_equipment_weight`|the cargo space all of that occupies|
+
+`field_11C_equipment_weight` is the sum of three terms:
+
+```
+400 * max(0, crew - class_base) + 10 * cutlasses + sum(weapon scaling factors)
+```
+
+The class base is the per-class reference crew at `0x00673664` = 10, 16, 30, 24 - crew up
+to that allowance is free, and only sailors above it cost hold space. Measured on a
+type 1 ship (base 16) with 34 crew, 49 cutlasses and 4 large + 2 small catapults:
+`400*18 + 10*49 + (4*2000 + 2*1000)` = 17690, exactly the value in the field. A captured
+type 2 hull (base 30) carrying only 8 crew, 27 cutlasses and 7 bombards + 2 small
+ballistas gave `0 + 270 + 16000` = 16270, also exact - so an under-crewed ship gets no
+credit for the unused allowance. Free cargo
+space is therefore `field_10_capacity - field_11C_equipment_weight - loaded wares`,
+which is the arithmetic the pirate AI uses when it checks whether it has room for loot.
+
+## Speed
+`0x00612930` computes a ship's current speed, and it is the number the
+[pirate AI](./pirates.md) compares when it decides whether it can run a target down. It
+returns 1 for a ship with no capacity or no maximum health, otherwise:
+
+```
+base[ship_type & 3]                                    // 693, 693, 578, 578 at 0x0067ADC0
+  * (4096 - 614 * used_capacity / capacity) / 4096     // a full hold costs 15%
+  * clamp(179 * health / max_health + 113, 166, 256) / 1024
+  * (2550 + navigation_skill) / 2550                   // the captain
+```
+
+- A **full hold** costs about 15% of the ship's speed.
+- **Damage** costs up to about 35%, and the clamp means anything above roughly 80% of
+  maximum health gives the full term - which is also the threshold at which a damaged
+  pirate breaks off and sails home.
+- The **captain's navigation skill** is worth up to +10% (skill 255; the displayed level 5
+  is skill 215, so +8.4%, each level of 43 points being +1.7%). A ship with **no** captain
+  skips the factor entirely and so matches a navigation-0 captain: captains never make a
+  ship slower.
 
 ## Iterating One Merchant's Ships
 

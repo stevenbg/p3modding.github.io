@@ -67,6 +67,7 @@
             - [Impact](./ships/sea-battles/projectiles/impact.md)
         - [Reefs](./ships/sea-battles/reefs.md)
 - [Auto Traders](./auto-traders.md)
+- [Pirates](./pirates.md)
 - [Graphics Library (SGL)](./graphics.md)
 - [UI](./ui.md)
     - [Trading Office Window](./ui/trading-office-window.md)
