@@ -16,8 +16,13 @@ There are two different things called "pirate":
 
 ## Bands and Hideouts
 The ships container holds up to five **band** objects, pointers at `0x006DD7AC`
-(container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them, where
-`n` is the pirate setting byte at `[[0x006CC3E8] + 0x13]` - so one, three or five bands.
+(container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them, where `n`
+is the **Pirates activity** setting: the byte at `[[0x006CC3E8] + 0x13]`, holding **0 for
+low, 1 for normal and 2 for high** - the Game settings dropdowns are 1-based on screen and
+stored one lower (`0x0049935B` copies it from `[window+0x1B90]`). That gives one, three or
+five bands, and five is why the game reserves exactly five band slots. "Difficulty" is
+only a preset over the individual settings: `0x00463B20` writes one value into all of
+them. Every other reader of this byte is pirate code, so it governs nothing else.
 Each is a 24-byte heap object (`new` at `0x0064F7B9`, constructor `0x00513720`, seeded by
 `0x00513D80`):
 
@@ -117,10 +122,16 @@ attacked. In order:
   operation `0x3E` posts and from the dynamic name registry used by operations `0xB6` and
   `0xB8`, so it marks a static background merchant rather than a piracy rule as such.
 - **The restraint counter.** For an AI-owned ship the pirate's `field_138` must be exactly
-  `0`; for a **player-owned** ship anything up to `0x900` (nine days) will do. Both
-  branches also consult `[merchant + hometown + 0x39C]`, which must reach 2 together with
-  the pirate setting; in a live game that byte reads 3..5 for every merchant, so it never
-  blocks.
+  `0`; for a **player-owned** ship anything up to `0x900` (nine days) will do.
+- **Worth robbing at all.** Both branches also require the owner's **rank in his home
+  town** plus the Pirates activity setting to reach 2. At *high* activity that is
+  satisfied by any rank, at *normal* it needs rank 1, at *low* rank 2 - so the lowest
+  ranks can be beneath a pirate's notice, and the more the setting is turned down the more
+  established a merchant has to be before he is worth attacking. Rank is the byte at
+  `merchant + 0x39C + town`, computed in front of
+  [update_merchant_reputation_and_value](./ch05-03-reputation.md) from the per-town
+  reputation float at `merchant + 0x2FC + town*4` and the company value at `+0x46C`
+  (see [Ranks](./ch05-01-ranks.md#where-the-rank-is-stored)). 
 - **The prey must be carrying cargo** (`field_118` greater than zero) and the pirate's own
   convoy must have at least `0x7D0` raw capacity free - one load - to hold the loot.
 - **Speed.** With the per-ship speed of `0x00612930`, the prey convoy's slowest ship

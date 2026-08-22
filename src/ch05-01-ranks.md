@@ -30,3 +30,14 @@ However, to actually reach the next rank, the following reputation values must b
 
 ## Building Permits
 Once you reach the Trader rank in a town, it'll grant you the building permit.
+
+## Where the Rank is Stored
+A merchant's rank is kept **per town**, as a byte at `merchant + 0x39C + town_index`, and
+computed by the code in front of `update_merchant_reputation_and_value` (`0x004F7653`,
+`0x004F7699`, `0x004F78B1`, `0x004F79B6`, `0x004F7A27`, `0x004F7A99`, `0x004F7AE2`,
+`0x004F7B0E`, `0x004F7B31`) from the per-town reputation float at
+`merchant + 0x2FC + town_index*4` and the company value at `merchant + 0x46C` - the
+`0xDBBA0` = 900,000 comparison at `0x004F7AD4` is the Patrician step of the table above.
+Observed values in a live 24-town game run 3..5 for the AI merchants, and the
+[pirate AI](./pirates.md) reads the home-town entry as its "is this merchant worth
+robbing" test.
