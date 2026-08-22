@@ -30,8 +30,10 @@ searching a window's address range for one of these statics finds nothing, and t
 to identify a static is to disassemble the mass-constructor around the call to the
 window's constructor.
 
-Not every UI object has a static: the scrollmap's trade route panel, for example, is
-only reachable through its vtable (see [Trade Route Panel](./ui/trade-route-panel.md)).
+Not every static lives in that cluster, so failing to find one there does not mean
+there is none: the scrollmap's
+[ship panel](./ui/ship-panel.md) keeps its instance in `0x006CE6D0`,
+stored by the same mass-constructor at `0x00426700`.
 
 ## Window Class Family
 The window classes share their vtable layout. Two slots are load-bearing for modding:
@@ -192,6 +194,10 @@ renders, at the cost of one following character being swallowed - so a `\dX` wan
 spare character behind it.
 
 ## Graphics and Icons
+Every drawing call named on this page is a thunk into `ddraw_Dll.dll`, the
+[SGL graphics library](./graphics.md) - that page lists which export each thunk
+address resolves to.
+
 The small icons the building pages put beside their numbers - a coin, a crate, the crew
 figure - are graphics fetched by id from the resource manager at `0x006DA820` and blitted.
 The sequence, as the tavern does it at `0x005CDD07`, the shipyard at `0x005F4ECE` and
@@ -279,15 +285,16 @@ The trade route file loader (`0x004D5EE0`, see
 
 ## Render Imports
 Drawing goes through the game's own render DLL, `ddraw_Dll.dll` (shipped in the
-game directory, distinct from the system's `ddraw.dll`). Its exports are bound at
-startup into a function-pointer table in BSS around `0x006DA9F0`-`0x006DAA10`,
-and the game calls them through a block of trampolines at `0x004BB3E0` onward,
-one `jmp [pointer]` each - e.g. `0x004BB3F0` is `jmp [0x006DAA04]`, the text
-draw.
+game directory, distinct from the system's `ddraw.dll`). Its exports are resolved
+at startup into slots in BSS, and the game calls them through a block of
+`jmp [slot]` thunks at `0x004BAEC0`-`0x004BBB30` - the
+[graphics library](./graphics.md#how-the-executable-binds-it) page has the table
+that says which export each thunk resolves to.
 
-That text draw (`ddraw_Dll+0xF100`, cdecl, fourth argument the C string) begins
-with `cmp byte [string], 0` - no validity check of any kind - so any bad string
-pointer the game passes crashes *inside* `ddraw_Dll`. A crash address in
-`ddraw_Dll` therefore usually means bad arguments from game code, not a render
+Text is one of them: `0x004BB3F0` is `jmp [0x006DAA04]`, which resolves to
+`sgl_DrawText_Rect` (`ddraw_Dll+0xF100`, cdecl, fourth argument the C string).
+It begins with `cmp byte [string], 0` - no validity check of any kind - so any
+bad string pointer the game passes crashes *inside* `ddraw_Dll`. A crash address
+in `ddraw_Dll` therefore usually means bad arguments from game code, not a render
 bug; the caller is on the stack right above (see the
 [patrol letter crash](./bugs/patrol-letter-crash.md) for a worked example).

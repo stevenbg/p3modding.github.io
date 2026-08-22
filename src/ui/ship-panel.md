@@ -1,8 +1,20 @@
-# Trade Route Panel
-The scrollmap's right-side panel showing the selected ship or convoy and its trade
-route. The object has no static pointer; it can be captured by hooking the vtable slot
-at `0x0066F44C` (module offset `0x26F44C`), which holds the panel's per-frame update
-method `0x0048B3E0` - the hook receives the object as `this` on every update.
+# Ship Panel
+The scrollmap's right-side panel for the selected ship or convoy. Four buttons switch
+its view - Goods, Crew, Deck and Auto trade - so the trade route is only one of the
+things it shows, while the selection is common to all four. Vtable `0x0066F358`,
+per-frame update `+0xF4` = `0x0048B3E0`.
+
+Its static pointer is `0x006CE6D0`. The object is built once at startup like the
+building windows, but its static sits apart from the `0x006E55xx`
+[window cluster](../ui.md#window-objects), which is why it long looked as if it had
+none: the mass-constructor allocates `0x83C8` bytes at `0x004266D2`, calls the
+constructor (`0x00486D20`) at `0x004266E7`, and stores the result at `0x00426700`.
+Reading the static is enough - `p3-api` exposes it as `UIShipPanelPtr`.
+
+The object can also be captured by hooking the vtable slot at `0x0066F44C` (module
+offset `0x26F44C`), which holds the update method; the hook receives the object as
+`this` on every update. That was the original route and still works, but it is no
+longer necessary.
 
 |Field|Meaning|
 |-|-|

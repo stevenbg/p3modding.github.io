@@ -16,7 +16,7 @@ Per-ware widget structs follow at stride `0x190`: `+0x8E0` holds the entered amo
 buffer that is `atoi`'d and scaled by the barrel/bundle table at `0x00672C14`.
 
 `populate` (`0x00405A20`, thiscall(this, stop_pool_index, ship_index, flag)) rebuilds
-the whole dialog from the stop record. It is called by the route panel's Goods button
+the whole dialog from the stop record. It is called by the [ship panel](./ship-panel.md)'s Goods button
 (`0x0048C432`) and by the dialog's own stop-switching arrows, which follow the pool
 chain from `+0xA4` (`0x004075E3` next, `0x0040763A` previous). The displayed texts are
 sprintf-cached in the object, so in-place writes to the pool record stay invisible

@@ -1,5 +1,5 @@
 # Set Trade Route Active
-Operation `0x68` activates or deactivates a ship's trade route - the route panel's
+Operation `0x68` activates or deactivates a ship's trade route - the [ship panel](../ui/ship-panel.md)'s
 "active" checkbox.
 
 |Offset|Type|Value|

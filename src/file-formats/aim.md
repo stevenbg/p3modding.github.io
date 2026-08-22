@@ -25,4 +25,27 @@ render.
 `.aim` files can be converted to and from PNG with the community `aim_converter`
 tool (`to-png` / `to-aim`).
 
+## The Codec
+`AIM.dll` exports the codec as 32 decorated C++ symbols - `AIM_INIT`,
+`AIM_CONVERT_FILE`, `AIM_CONVERT_MEMFILE`, `AIM_CONVERT_RAW`, `AIM_FREE`,
+`AIM_WRITE_IMAGE` and so on - operating on an `AIM_IMAGE` struct whose first
+fields are the pixel pointer, a second buffer pointer, width and height. Only
+`ddraw_Dll.dll` and `Vto.dll` import it; the executable never calls it directly,
+so every decode in the game is one the
+[graphics library](../graphics.md#the-decoded-image-cache) asked for.
+
+Inside the DLL, every file decode passes through one call site at `AIM+0x2984`,
+a cdecl function taking `(image, file_path, file_data, file_size)`. The path
+argument makes that site the place to observe or substitute images by name -
+[mod-high-res](../patches/high-res.md) hooks it to swap in larger background
+art, and it is what identifies the files behind the
+[texture cache thrash](../bugs/texture-cache-thrash.md).
+
+Decoding is pure CPU work and not cheap: measured against the game's own
+`AIM.dll`, chunk-`34` strips decode at roughly 180-250 Mpx/s on a modern
+machine, so the shipyard's `362 x 4620` water strip costs about 9 ms and the
+trading office's `7740 x 363` overlay about 11 ms per decode. JPEG assets
+(`innenbild_werft01.jpg` and friends) go through `ijl11.dll`, the Intel JPEG
+Library, at comparable cost.
+
 [To be completed]
