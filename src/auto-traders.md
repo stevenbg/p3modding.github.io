@@ -1,7 +1,7 @@
 # Auto Traders
 Captains, office administrators and pirate captains are all the same 16-byte record. The
-array lives behind the ships container at `0x006DD7A0` (array pointer at `+0x0`, count
-word at `+0xF2` = `0x006DD892`, stride `0x10`):
+array lives behind the ships container at `0x006DD7A0` (array pointer at `+0x0`, stride
+`0x10`, allocated capacity in the word at `+0xF2` = `0x006DD892`):
 
 ```c
 struct auto_trader
@@ -89,6 +89,20 @@ that holds spawned tavern captains and employed records. The tail is free capaci
 `memset` to `0xFF` and freelist-linked through `field_0`; the allocator at `0x005097C0`
 grows the array by 64 records when it runs out, which is why references to a record are
 indices rather than pointers.
+
+`+0xF2` is the number of slots allocated, **not** a live population count - there is no
+count anywhere, because free slots are a freelist rather than a tail. It is still the right
+validity bound, and the one the game itself uses: the
+[skill gain](./operations/0012-auto-trader-skill-gain.md) handler rejects a captain index
+that is not below `[0x006DD892]` (`0x00538AC3`), exactly as it rejects a ship index not
+below `[0x006DD894]`.
+
+The **freelist head** is the word at `ships + 0xE0` = `0x006DD880`. The allocator
+(`0x005097C0`) pops it: it reads the head, follows that record's `field_0` to the next free
+index, stores that back as the new head, writes `0xFFFF` over the popped record's link, and
+returns the popped index. When the list runs dry the head equals the capacity, which is the
+grow trigger - the allocator then raises `+0xF2` by `0x40`, reallocates, and relinks the 64
+new records into the freelist by writing `index + 1` into each one's `field_0`.
 
 Records never expire, and the population circulates between taverns and decks. Because a
 slot is settled when the record is **created** and nothing ever moves a record afterwards,

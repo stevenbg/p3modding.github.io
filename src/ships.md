@@ -11,7 +11,7 @@ struct __declspec(align(4)) ships
   convoy *field_8_convoys;
   _DWORD field_C[5];
   class49 field_20_class49_array[16];
-  __int16 field_E0;
+  __int16 field_E0_auto_trader_freelist_head; // index of the first free auto-trader record; equals field_F2 when the list is empty
   unsigned __int16 field_E2_unused_ship_index;
   int field_E4;
   __int16 field_E8_unknown_ship_id;
