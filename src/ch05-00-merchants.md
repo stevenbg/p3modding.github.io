@@ -4,7 +4,7 @@
 00000000 {                                       // XREF: merchant_wrapper/r
 00000000     int field_0_money __tabform(NODUPS);
 00000004     int field_4;
-00000008     __int16 field_8;
+00000008     __int16 field_8_control_word;
 0000000A     __int16 field_A;
 0000000C     unsigned __int16 field_C_first_office_index;
 0000000E     unsigned __int16 field_E_first_ship_id;
@@ -198,6 +198,13 @@
 0000064C     int field_64C;
 00000650 };
 ```
+
+`field_8_control_word` is **`0` for a human player and non-zero for an AI merchant** (game
+setup writes `0x8001` at `0x00544644`, `0x005446E5` and `0x005491D3`). Several systems
+branch on it: bit `0x4` marks the background merchants [pirates](./pirates.md) leave alone,
+it decides which growth path the ten-day sweep gives a merchant's
+[captains](./auto-traders.md#gaining-and-losing-skill), and it gates whether that sweep
+touches his administrators at all.
 
 `field_19_hometown_index` is the town shown as "Home town" on the Personal screen: the
 town holding the merchant's home office. It changes when the player moves the home

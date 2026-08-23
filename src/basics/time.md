@@ -8,6 +8,26 @@ advances through the operation queue.
 Every ingame day is 256 ticks long, so there are 93440 ticks in a year.
 Consequently the least significant byte conveniently encodes the time of day.
 
+## The Calendar
+The day, month and year are not counted up as time passes - they are **derived from the
+tick counter once a day** by `0x005310D0`, so nothing else has to keep them in step:
+
+|Field|Meaning|
+|-|-|
+|`game_world+0x0`|day of the month, 1-based|
+|`game_world+0x1`|month, 0-based|
+|`game_world+0x2`|year (u16), `ticks / 93440`|
+|`game_world+0x4`|day of the year (u16), `(ticks >> 8) % 365`, so 0-based|
+
+The routine writes the year and the day of the year straight from the counter, then walks
+the month table at `0x00672D78`/`0x00672D7A` - the cumulative day of the year at which each
+month starts and ends - to find the month, and subtracts that month's start to get the day
+of the month.
+
+The day of the year is read by game logic, not just by the interface: the
+[ten-day update](../scheduled-tasks/0003-ten-day-update.md) resets its round counter on any
+run that lands in the first ten days of a year.
+
 ## Ticking Objects
 Different game objects tick at different intervals.
 Information about what happens in those ticks can be found in the respective chapters.

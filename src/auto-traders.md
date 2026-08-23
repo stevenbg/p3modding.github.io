@@ -16,9 +16,7 @@ loot share a tavern pirate demands is `25 + 5 * ceil(field_8 / 32)`, i.e.
 `field_2`/`field_3` as first/last
 name ids (modulo the name-registry counts `0x006DDB70`/`0x006DDB74`), splits a
 600-point budget randomly across the three skills, and stamps `field_4` from the
-current date serial. The two kinds also differ in their wage formula: captain
-records derive it from the trade skill alone (`0x004FE160`), pirate records from
-the sum of all three skills plus a base. A town's tavern offers a captain
+current date serial. See [Wages](#wages) for `field_C_daily_wage`. A town's tavern offers a captain
 for hire while the chain contains a captain record no merchant employs
 (`field_F_merchant_index` = `0xFF`): the captain resolver `0x005269A0`(town,
 merchant) walks the chain applying exactly that, preferring a captain the asking
@@ -94,6 +92,107 @@ does not count him - so dismissing captains without revisiting their taverns
 makes the game under-count and spawn extras, pushing the world above the usual
 two hireable captains (four observed live).
 
+## Gaining and Losing Skill
+Every one of the three skill bytes is written by a single operation,
+[`0x12`](./operations/0012-auto-trader-skill-gain.md) (handler `0x00538A80`), and every
+write goes through the same clamp: a gain is added to the current byte and the result is
+cut to that skill's ceiling if it passes it or wraps.
+
+**The ceiling belongs to the record's slot, not to the man.** It is read from the table at
+`0x00673B34` - 250, 200, 250, 150, i.e. displayed levels 5, 4, 5 and 3 - indexed by
+`index & 3` for navigation, `(index >> 2) & 3` for trade and `(index >> 4) & 3` for
+combat, where `index` is the record's position in the auto-trader array.
+
+A slot is settled when the record is **created**, and nothing moves a record afterwards, so
+what matters is whether an action allocates a new record or reuses the existing one:
+
+- **Dismissing a captain does not destroy his record.** The finalizer (task `0x29`,
+  `0x004DDE70`) unlinks it, writes `0xFF` into its merchant byte and links it back into the
+  town's chain, so the same man - same slot, same ceilings, same skills - waits in that
+  tavern to be hired again. Hiring, dismissing, moving him between ships: none of it
+  reallocates anything.
+- **An office administrator is the exception.** Operation `0x5E` frees his record to the
+  freelist when he is dismissed (`0x005098B0`, which also clears the office's autotrade
+  flags), and its hire path unconditionally allocates a fresh one and writes trade `= 0`
+  (`0x0053DA1D`) before recomputing the wage - so the record that comes back is a different
+  man who has to earn his trade skill again from nothing. Ceilings never enter into it: his
+  growth path has no ceiling table, and his navigation and combat are dead stats.
+
+For a human player's captains the navigation ceiling does double duty as the threshold the
+other two skills are tested against, which is what decides whether trade and combat ever
+reach ceilings of their own; see
+[the ten-day update](./scheduled-tasks/0003-ten-day-update.md#what-that-means-for-a-captains-final-skills).
+
+**Skill is lost as well as gained.** The clamp runs for all three skills on every
+application, even one whose gain for that skill is zero, so a skill sitting *above* its
+ceiling is cut back by the first gain event that reaches the record. Fresh records are
+rolled roughly uniformly over `0..255` per skill (sum capped at 600), so starting above a
+ceiling of 150 or 200 is common: on a live save a captain carrying 253 in all three came
+back as `250 / 150 / 250`, two and a half displayed levels of trade gone.
+
+### Where gains come from
+|Producer|Gain|
+|-|-|
+|the [ten-day world update](./scheduled-tasks/0003-ten-day-update.md)|`rand % 51` for a human player's captain, a flat `8` for an AI merchant's, about four times a year per captain|
+|a pirate raider reaching its hideout (`0x00514C93`)|a flat `50`, once per crewed ship in the arriving convoy, credited to the convoy's acting ship - see [Pirates](./pirates.md#bands-and-hideouts)|
+
+Nothing else writes a skill byte, and nothing anywhere decrements one. Nothing depends on
+what the captain has been doing either, with the single exception of the hideout award:
+gain is a roll, not a reward for sailing, trading or fighting. A record sitting in a
+tavern gains nothing at all, because the sweep only walks merchants' ship chains - eleven
+tavern pirates were byte-identical across two dumps 259 days apart.
+
+That also makes the hideout award by far the fastest growth in the game, and the only one
+a player can drive. A ship handed to a pirate captain leaves the merchant's ship chain
+(its `field_0_merchant_index` becomes `0xFF`), so the ten-day sweep never sees it again
+and the award is its only source of skill: one measured raider went from `60 / 164 / 186`
+to all three ceilings inside 162 days.
+
+### Administrators
+An office administrator gains too, from the same ten-day sweep but on his own path -
+[operation `0x67`](./operations/0067-administrator-skill-gain.md), which adds exactly 43
+points, one displayed level, and stops when that would wrap. A fresh administrator starts
+at `0`, so his trade skill walks `0, 43, 86, 129, 172, 215` and no further; it is always
+an exact multiple of 43. His navigation and combat are never touched, and only a **human**
+merchant's administrators gain at all.
+
+An administrator is therefore much simpler than a captain: only trade does anything for him
+(it is the [buying discount](#buying-discount), and he neither sails nor fights), there is
+no ceiling table on his path, and there is nothing to lose to a clamp. Every administrator
+who is left in place long enough ends at level 5 - the `42%` roll only decides how long that
+takes, roughly two eligible rounds per level.
+
+### Retirement
+`field_4` is a birth stamp in ticks - the initializer writes `game_time - offset` with
+`offset = 46720 * (48..79) + 1792 * (0..31)`, so a new record is 24.0 to 40.1 years old.
+The ten-day sweep retires a captain once his age passes `0x474A00` ticks, almost exactly
+**50 years**, marking the record with `field_E` and scheduling task `0x27` to take him off
+his ship. An AI merchant's captain goes at once; a human player's gets a probability roll
+that cannot fire before about 51.6 years, and when it does it arrives as
+[operation `0x13`](./operations/0013-captain-retirement.md) and a message.
+
+## Wages
+`field_C_daily_wage` is recomputed from the skills whenever they change, by one of two
+routines - which one depends on the path that touched the record, not on the kind of record
+it is:
+
+|Routine|Formula|Used by|
+|-|-|-|
+|`0x004FE190`|`(nav + trade + combat) / 50 + (field_8 % 11) + 10`|the [skill gain](./operations/0012-auto-trader-skill-gain.md) handler, so every captain and pirate|
+|`0x004FE160`|`20 * (trade / 43) + 10`, i.e. only ever 10, 30, 50, 70, 90 or 110|the administrator paths, operations `0x5E` and `0x67`|
+
+Both check out against live saves: a captain with `39/61/125` and `field_8` = 6 reads wage
+22, a pirate with `237/251/112` and `field_8` = `0xFB` reads 31, and administrators at trade
+0, 43, 86, 129 and 215 read 10, 30, 50, 70 and 110.
+
+**What the interface shows is not the record's wage.** For an administrator the trading
+office window calls `0x00500F10(office)`, which returns the record's wage **plus**
+`office+0x2D2`, and falls back to `office+0x2D2 + 10` when the post is vacant - the cost of
+the level 0 administrator you would get. [`office+0x2D2`](./basics/office.md) counts the
+**business buildings the merchant owns in that town**, one per building - verified across
+several saves and offices. So a busy office pays its administrator a gold a day more for
+every business it runs, and an office with none pays exactly what the record says.
+
 ## Buying Discount
 Auto traders buy cheaper as their trade skill grows. The captain (`0x004D5347`) and
 administrator (`0x004FF7E8`) buying routines both compute the percentage of the
@@ -110,9 +209,9 @@ flipped above `0x1000000` to avoid overflowing); its sell orders are settled thr
 `get_sell_price` without any skill adjustment, so the discount is buying-only. An
 office whose administrator index (`office+0x2F2`) is invalid pays 100%.
 
-Office administrators do gain skill like captains do (verified in-game: a long-running
-save showed administrator trade levels 1-5), even though the game never displays it -
-a level 5 administrator quietly buys everything 10% cheaper.
+Office administrators gain trade skill like captains do, in whole displayed levels
+(see [Administrators](#administrators) above), even though the game never shows it - a
+level 5 administrator quietly buys everything 10% cheaper.
 
 ## Running a Route Stop
 The executor is `0x004D5200` (thiscall on `0x006DD728`, arguments `(ship, office)`). It

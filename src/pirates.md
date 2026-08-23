@@ -8,11 +8,19 @@ There are two different things called "pirate":
 
 - a **pirate ship** roaming the map, owned by nobody (`field_0_merchant_index` = `0xFF`)
   and flying status `0x12`. These belong to *bands* based at hideouts, and are what this
-  chapter is about.
+  chapter is about. Both fields are written together at `0x005151A4`, where a ship puts to
+  sea as a raider: status `0x12`, `field_15C_is_pirate`, merchant index `0xFF`, and a
+  convoy record of its own from `0x005062F0`. `0x00516225` does the same alongside a full
+  refit.
 - a **pirate captain**, one of the tavern characters an
   [auto trader record](./auto-traders.md) can be, whom the player can put in command of
-  one of his own ships. Such a ship keeps the player's merchant index and its normal
-  status `0x0F`; it is marked only by `field_15C_is_pirate`.
+  one of his own ships. Handing the ship over (operation `0x0D`) only sets
+  `field_15C_is_pirate`, and only on a ship already at sea under its normal status `0x0F`;
+  it leaves the merchant index alone. But a raider actually sailing for its pirate captain
+  reads `field_0_merchant_index` = `0xFF`, like any other pirate ship - measured in a live
+  save, where two ships just given to pirates read `0xFF` while their sister ships under
+  ordinary captains still read the player's index. What keeps such a ship tied to its owner
+  is `field_15D`, not the merchant index.
 
 ## Bands and Hideouts
 The ships container holds up to five **band** objects, pointers at `0x006DD7AC`
@@ -62,6 +70,25 @@ nothing at the same rate - and it is also refitted: artillery totals climb back 
 hull's full fit, while crew losses are made good more slowly. `0x00514D40` dispatches a
 ship again only when its captain is a pirate record and its health is back at maximum
 (`0x00514DE0`).
+
+`0x00514B80`, the hand-over itself, walks the arriving convoy and for each ship unlinks it
+from the convoy, links it into the band's chain at `+0x12`, parks it off the map, and:
+
+- **cashes the cargo into the band.** Every ware is zeroed and its amount scaled by the
+  per-ware factors at `0x00673A18`; the total divided by 1000 is added to the band's
+  `+0x16`.
+- **awards the captain.** For every ship that carries one, it enqueues
+  [operation `0x12`](./operations/0012-auto-trader-skill-gain.md) with a gain of `50` for
+  navigation and `50` for the other skills (`0x00514C93`), crediting the **acting** ship of
+  the convoy (`convoy+0x10`) rather than the ship being processed - so a multi-ship raiding
+  party pays its leader once per crewed ship. This is the fastest skill growth in the game;
+  see [Gaining and Losing Skill](./auto-traders.md#gaining-and-losing-skill).
+- **upgrades a ship below upgrade level 2** through `0x0051A750(ship, 1)`.
+- **drops the owner link of a badly damaged ship.** At `0x00514C5F`, a ship arriving with
+  less than half its maximum hull has `field_15D` set to `0xFF`. Since that field is what
+  marks a raider as somebody's hired pirate, a privateer that limps home stops being its
+  owner's: it is repaired at the hideout and put back to sea as a free pirate, with nothing
+  in the interface to say so.
 
 ## Pirate Convoys
 The [ships tick](./ships.md) keeps three chains, and an at-sea pirate (status `0x12`,
@@ -182,7 +209,7 @@ ship is fair game for a nine-day window in every cycle.
 |Field|Meaning|
 |-|-|
 |`field_15C_is_pirate`|set by operation `0x0D` (`0x005386C0`) on a ship that is at sea; also ORs `0x18` into `field_3D`. This is the flag a hired pirate's ship carries|
-|`field_15D`|the merchant a pirate belongs to, `0xFF` for a free pirate. Written by the ship spawner `0x00509250` from the ship's own merchant index|
+|`field_15D`|the merchant a pirate belongs to, `0xFF` for a free pirate. Written by the ship spawner `0x00509250` from the ship's own merchant index, and cleared again if the ship reaches a hideout under half hull|
 |`field_158`|the band index, 0..4. The getter `0x0051A470` falls back to the first surviving band, so an orphaned raider re-homes itself|
 |`field_159`|an assigned town index, stored only for ships without a real owner (`0x0051A83B`), otherwise `0xFF`|
 

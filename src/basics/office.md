@@ -10,6 +10,7 @@ office-specific fields after it. The whole record is `0x44C` bytes.
 |`0x2C6`|u8|town index|
 |`0x2C8`|u16|next office of the same merchant|
 |`0x2CA`|u16|next office in the same town|
+|`0x2D2`|u16|business buildings the merchant owns in this town - one per building, verified across several saves and offices. Counted in a loop over the town's buildings (`0x004FFDD9`, `0x004FFE5A`) and added to the administrator's [wage](../auto-traders.md#wages) wherever the interface shows it|
 |`0x2D6`|u16|state flags; bit `0x1` means the office holds administrator orders|
 |`0x2F2`|u16|the administrator, as an index into the [auto trader](../auto-traders.md) array; out of range when the office has none|
 |`0x2F4`|i32[24]|administrator order price per ware, the sign encoding the direction|
