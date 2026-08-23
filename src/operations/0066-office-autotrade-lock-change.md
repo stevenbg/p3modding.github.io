@@ -18,3 +18,7 @@ bitmap at `office+0x3B4`. On a failed office lookup the operation is silently dr
 The administrator view draws the checkbox directly from the bitmap (reads at
 `0x005D9D98` and `0x005DD987`, passing the player merchant global `operations+0x924`
 and the window's town).
+
+What the bit does once set is
+[`0x00500EC0`](../basics/office.md#what-the-lock-bit-does): it caps how much of the ware an
+auto trader may load out of the office at `stock - minimum store quantity`.

@@ -113,3 +113,76 @@ office whose administrator index (`office+0x2F2`) is invalid pays 100%.
 Office administrators do gain skill like captains do (verified in-game: a long-running
 save showed administrator trade levels 1-5), even though the game never displays it -
 a level 5 administrator quietly buys everything 10% cheaper.
+
+## Running a Route Stop
+The executor is `0x004D5200` (thiscall on `0x006DD728`, arguments `(ship, office)`). It
+runs from the **ships tick** (`0x00506720`), not from an operation: the tick tests bit 0 of
+`ship+0x136`, and `0x00518860` resolves the office for the ship's merchant and current town
+through the office lookup `0x005308A0` before calling the executor on the ship's current
+[route stop](./file-formats/rou.md#applied-routes-at-runtime).
+
+The stop's instructions are executed in **two passes over the whole ware order array**,
+never interleaved:
+
+|Pass|Handles|
+|-|-|
+|1|selling to the town (positive price) and unloading into the office (zero price, negative amount)|
+|2|buying from the town (negative price) and loading from the office (zero price, positive amount)|
+
+Between them, `0x004D5600` calls the ship's recompute (`0x005182B0`, see
+[Ships](./ships.md#crew-cutlasses-and-the-equipment-weight)) and keeps the returned **free
+capacity** as a budget, clamped at zero. Pass 2 caps every purchase and every office load
+against that budget and decrements it as it spends.
+
+Two consequences worth knowing:
+
+- **Unloading and selling always happen before loading and buying**, for every ware, no
+  matter how the order array is arranged - the ship frees space first and the capacity
+  budget is measured afterwards. Confirmed in-game.
+- The order array only sequences wares **within** a pass. It still matters there: the
+  capacity budget and the merchant's cash are consumed in that sequence during pass 2, so
+  earlier entries get first claim on the hold when not everything fits.
+
+Each pass walks all 24 slots of the order array; an entry outside `0..0x17` is **skipped**
+rather than ending the walk, and a ware whose amount is `0` has no instruction. Every
+quantity is floored to a whole in-game unit (the barrel/bundle scaling table at
+`0x00672C14`) before anything moves. The amount field is a cap, not a target:
+
+|Instruction|Quantity|
+|-|-|
+|unload into the office|`-amount`, capped by what is aboard|
+|load from the office|`amount`, capped by [`0x00500EC0`](./basics/office.md#what-the-lock-bit-does) and by the capacity budget|
+|sell to the town|`0x0052EA80(ware, town, price) - town stock`, capped by `amount`|
+|buy from the town|capped by `amount`, by the capacity budget, and by the merchant's cash|
+
+A purchase the merchant cannot fully afford is **scaled down proportionally**
+(`0x004D5705`) rather than skipped, and its cost runs through the captain's
+[buying discount](#buying-discount). Goods entering the office go through
+[`0x004FF6F0`](./basics/office.md#average-purchase-price), which is how the office's
+average purchase price follows the cargo.
+
+Finally, the stop's [action byte](./file-formats/rou.md#action-byte) is consulted twice:
+bit `0x04` (the first stop of the route) builds a record from the captain's name ids and
+the ship's registry id and passes it to `0x004D6530`, and bit `0x02` clears the low bits of
+`ship+0x136` once the stop is finished.
+
+## The Administrator's Trading
+An office administrator is not driven by the ships tick but by the world tick itself:
+
+```
+advance_time 0x00530E80
+  └─ 0x0051BA10   walk the town's offices, chaining office+0x2CA
+       └─ 0x004FFF20   the per-office periodic routine, dispatching on office+0x2D6:
+            bit 0x10 -> 0x004FFA30   AI-merchant offices (skipped when merchant+0x8 is 0)
+            bit 0x02 -> 0x004FFC20
+            bit 0x01 -> 0x004FF780   the administrator's trading
+```
+
+The town whose offices are visited comes from the tick counter (`tick >> 3`), so offices
+are worked through in a staggered round rather than all at once.
+
+`0x004FF780` walks the wares from 23 down to 0 and acts on each
+[order](./basics/office.md) whose price is non-zero. On the sell side (positive price, the
+minimum price) it offers the stock **above** the minimum store quantity - so that column is
+a floor the administrator sells down to, not a target it tops up to. Purchases apply the
+administrator's own [buying discount](#buying-discount).

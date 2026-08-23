@@ -125,6 +125,13 @@ credit for the unused allowance. Free cargo
 space is therefore `field_10_capacity - field_11C_equipment_weight - loaded wares`,
 which is the arithmetic the pirate AI uses when it checks whether it has room for loot.
 
+`0x005182B0` is where the game maintains all of this. Called on a ship it floors every
+ware's cargo to a whole unit, then recomputes `field_114` (the payload's purchase value),
+`field_118` (used space), `field_11C` by exactly the formula above - `0x0051838A` for the
+crew term, `0x00518411` for the cutlasses term - and `field_120`, and **returns the free
+cargo space**. That return is the budget an
+[auto trade route stop](./auto-traders.md#running-a-route-stop) spends on loading.
+
 ## Speed
 `0x00612930` computes a ship's current speed, and it is the number the
 [pirate AI](./pirates.md) compares when it decides whether it can run a target down. It

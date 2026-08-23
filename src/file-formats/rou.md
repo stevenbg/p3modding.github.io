@@ -36,6 +36,13 @@ The "direction" of a transaction is encoded in the price and amount:
 The "Max" amount is represented by `1_000_000_000` for both barrel and bundle wares.
 Amounts are stored in raw units: display units times the ware scaling (bundles 2000, barrels 200).
 
+The ware order array is a **sequence of ware indices**, not a set of flags: it is the order
+in which the stop's instructions are carried out. Entries outside `0..0x17` are skipped
+rather than ending the sequence, and a ware whose amount is `0` carries no instruction. The
+order only sequences wares within each of the two passes the executor makes over it - see
+[Running a Route Stop](../auto-traders.md#running-a-route-stop) for what actually happens
+at a stop.
+
 ## Action Byte
 The action byte combines the stop's repair flag with a first-stop marker:
 

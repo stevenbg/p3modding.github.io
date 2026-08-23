@@ -8,6 +8,7 @@
     - [Facilities](./basics/facilities.md)
     - [Time](./basics/time.md)
     - [Storage](./basics/storage.md)
+    - [Trading Office](./basics/office.md)
     - [Ship Types](./basics/ships.md)
     - [Ship Artillery](./basics/ship-artillery.md)
 - [Operations](./operations.md)
