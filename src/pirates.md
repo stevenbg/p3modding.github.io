@@ -8,9 +8,9 @@ There are two different things called "pirate":
 
 - a **pirate ship** roaming the map, owned by nobody (`field_0_merchant_index` = `0xFF`)
   and flying status `0x12`. These belong to *bands* based at hideouts, and are what this
-  chapter is about. Both fields are written together at `0x005151A4`, where a ship puts to
-  sea as a raider: status `0x12`, `field_15C_is_pirate`, merchant index `0xFF`, and a
-  convoy record of its own from `0x005062F0`. `0x00516225` does the same alongside a full
+  chapter is mostly about. Both fields are written together at `0x005151A4`, where a ship
+  puts to sea as a raider: status `0x12`, `field_15C_is_pirate`, merchant index `0xFF`, and
+  a convoy record of its own from `0x005062F0`. `0x00516225` does the same alongside a full
   refit.
 - a **pirate captain**, one of the tavern characters an
   [auto trader record](./auto-traders.md) can be, whom the player can put in command of
@@ -22,188 +22,12 @@ There are two different things called "pirate":
   ordinary captains still read the player's index. What keeps such a ship tied to its owner
   is `field_15D`, not the merchant index.
 
-## Bands and Hideouts
-The ships container holds up to five **band** objects, pointers at `0x006DD7AC`
-(container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them, where `n`
-is the **Pirates activity** setting: the byte at `[[0x006CC3E8] + 0x13]`, holding **0 for
-low, 1 for normal and 2 for high** - the Game settings dropdowns are 1-based on screen and
-stored one lower (`0x0049935B` copies it from `[window+0x1B90]`). That gives one, three or
-five bands, and five is why the game reserves exactly five band slots. "Difficulty" is
-only a preset over the individual settings: `0x00463B20` writes one value into all of
-them. Every other reader of this byte is pirate code, so it governs nothing else.
-Each is a 24-byte heap object (`new` at `0x0064F7B9`, constructor `0x00513720`, seeded by
-`0x00513D80`):
+The two halves of the subject have pages of their own:
 
-|Offset|Meaning|
-|-|-|
-|`+0x0`, `+0x4`|lazily created sub-objects (`0x00514530` allocates a 0x6C-byte one)|
-|`+0xA`|the convoy index the band's raiding party uses|
-|`+0xE`|hideout index|
-|`+0xF`|a class byte, `1` when the hideout's own class is 3..5, otherwise a random 0/2/3|
-|`+0x12`|head of the band's ship chain (ships linked through `field_6_next_ship_index_in_convoy`)|
-|`+0x14`|behaviour class, `rand & 3`|
-|`+0x15`|state; `1` makes `0x00514000` return the ships, free the object and null the slot|
-
-Every band is ticked once per in-game day - the ships tick calls `0x00514000` on each
-slot when the tick's low byte is `0x6F` (see [Time](./basics/time.md): a day is 256
-ticks). Several scheduled tasks also work on these objects: opcodes `0x1F`, `0x23`,
-`0x24`, `0x25`, `0x30`, `0x32` and `0x34`.
-
-Hideouts come from a runtime table at `0x006DDBB0`, 52 bytes per record, at least 48 of
-them readable:
-
-|Offset|Meaning|
-|-|-|
-|`+0x0`|x (read at `0x00505FD5` and `0x0051516D`)|
-|`+0x4`|y|
-|`+0x8`|pointer into a 0x50-stride array|
-|`+0x10`|region id, 0..3|
-|`+0x11`|class byte 0..7, which drives the band's `+0xF`|
-|`+0x12`|`0x2D` followed by `l`, `r` or `c` - ASCII, so part of a name|
-|`+0x14`..|four (x, y) dword pairs close to the hideout|
-
-A hideout is not a place on the map: a ship that reaches its hideout's coordinates is
-taken off the map entirely (`0x0050D040`, then `0x00514B80` hands it to the band) and
-parks at position `32767, 32767`. While parked it is **repaired at exactly 1000 hull per
-day** - measured over 61 days on one ship and 41 days on another, which was built from
-nothing at the same rate - and it is also refitted: artillery totals climb back to the
-hull's full fit, while crew losses are made good more slowly. `0x00514D40` dispatches a
-ship again only when its captain is a pirate record and its health is back at maximum
-(`0x00514DE0`).
-
-`0x00514B80`, the hand-over itself, walks the arriving convoy and for each ship unlinks it
-from the convoy, links it into the band's chain at `+0x12`, parks it off the map, and:
-
-- **cashes the cargo into the band.** Every ware is zeroed and its amount scaled by the
-  per-ware factors at `0x00673A18`; the total divided by 1000 is added to the band's
-  `+0x16`.
-- **awards the captain.** For every ship that carries one, it enqueues
-  [operation `0x12`](./operations/0012-auto-trader-skill-gain.md) with a gain of `50` for
-  navigation and `50` for the other skills (`0x00514C93`), crediting the **acting** ship of
-  the convoy (`convoy+0x10`) rather than the ship being processed - so a multi-ship raiding
-  party pays its leader once per crewed ship. This is the fastest skill growth in the game;
-  see [Gaining and Losing Skill](./auto-traders.md#gaining-and-losing-skill).
-- **upgrades a ship below upgrade level 2** through `0x0051A750(ship, 1)`.
-- **drops the owner link of a badly damaged ship.** At `0x00514C5F`, a ship arriving with
-  less than half its maximum hull has `field_15D` set to `0xFF`. Since that field is what
-  marks a raider as somebody's hired pirate, a privateer that limps home stops being its
-  owner's: it is repaired at the hideout and put back to sea as a free pirate, with nothing
-  in the interface to say so.
-
-## Pirate Convoys
-The [ships tick](./ships.md) keeps three chains, and an at-sea pirate (status `0x12`,
-case `0x00507099`) is pulled out of the at-sea chain and given a **convoy record** of its
-own through `0x005062F0`. If its health has reached zero it is removed instead. From then
-on the pirate is driven by the convoy loop, case `0x00507A65`, once per tick:
-
-1. if the ship is not in the x-sorted neighbour list (`field_A`/`field_C` both `0xFFFF`),
-   `0x0050CE50` inserts it;
-2. the restraint counter `convoy+0x16` counts down by one and is mirrored onto the acting
-   ship's `field_138`;
-3. if `convoy+0x14` bit `0x40` is set, the current prey is re-validated and the pirate
-   engages;
-4. otherwise, **only on every fourth tick**, it looks for prey with `0x0050D9E0` and asks
-   `0x00515360` whether it may attack;
-5. engaging unlinks the convoy and calls `0x0050BC40`, which sets convoy status `0x14` and
-   hands both parties to the [sea battle](./ships/sea-battles.md) subsystem;
-6. with no prey it advances along its course (`0x00502110`), and on arrival unlinks and
-   removes the ship.
-
-A pirate always gets a convoy record even when it sails alone, because every comparison
-below is made fleet against fleet. Packs of one to three ships have been observed.
-
-## Finding Prey
-`0x0050D9E0` keeps the current target as long as it is still at sea and inside the chase
-radius; only when that fails does it rescan, walking the neighbour list in both
-directions and taking the **nearest** candidate inside the acquisition radius. The radii
-live on the ships container and are savegame state, not constants:
-
-|Field|Meaning|Observed|
-|-|-|-|
-|`+0xFA`|acquisition radius, squared|10000, i.e. 100|
-|`+0xFC`|chase radius, squared|12100, i.e. 110|
-|`+0xFE`|how far the neighbour walk may run in x|100|
-
-Because the current prey is sticky, a pirate will shadow one ship for days while a closer
-one sails past untouched.
-
-Three rectangles in `.rdata` are excluded outright - the map's three rivers. The test is
-`0x0050E340`, and the boxes are read from `0x00673564` as x0, x1, y0, y1:
-
-|x0|x1|y0|y1|
-|-|-|-|-|
-|442|658|1521|1691|
-|2265|2332|147|453|
-|1497|1578|1263|1444|
-
-## The Decision to Attack
-`0x00515360` takes the pirate's ship index and decides whether the latched prey may be
-attacked. In order:
-
-- **Never its owner.** `field_15D` holds the merchant a pirate belongs to; that merchant's
-  ships are skipped, which is what protects a player's fleet from his own hired pirate.
-- **Never a protected merchant.** If the prey's owner has bit `0x4` in `merchant+0x8`, the
-  ship is skipped. In a live 24-town game that bit is carried by merchants 0..23 - exactly
-  one per town, hometown equal to index - and across 27 observed raids not one victim came
-  from that group. The same bit also excludes those merchants from the letter that
-  operation `0x3E` posts and from the dynamic name registry used by operations `0xB6` and
-  `0xB8`, so it marks a static background merchant rather than a piracy rule as such.
-- **The restraint counter.** For an AI-owned ship the pirate's `field_138` must be exactly
-  `0`; for a **player-owned** ship anything up to `0x900` (nine days) will do.
-- **Worth robbing at all.** Both branches also require the owner's **rank in his home
-  town** plus the Pirates activity setting to reach 2. At *high* activity that is
-  satisfied by any rank, at *normal* it needs rank 1, at *low* rank 2 - so the lowest
-  ranks can be beneath a pirate's notice, and the more the setting is turned down the more
-  established a merchant has to be before he is worth attacking. Rank is the byte at
-  `merchant + 0x39C + town`, computed in front of
-  [update_merchant_reputation_and_value](./ch05-03-reputation.md) from the per-town
-  reputation float at `merchant + 0x2FC + town*4` and the company value at `+0x46C`
-  (see [Ranks](./ch05-01-ranks.md#where-the-rank-is-stored)). 
-- **The prey must be carrying cargo** (`field_118` greater than zero) and the pirate's own
-  convoy must have at least `0x7D0` raw capacity free - one load - to hold the loot.
-- **Speed.** With the per-ship speed of `0x00612930`, the prey convoy's slowest ship
-  against the pirate's fastest: `19 * prey > 20 * own` refuses. The prey may be about 5%
-  faster and no more.
-- **Strength.** `7 * prey > 10 * own` refuses, so a pirate attacks while it has at least
-  **70%** of the target's strength. Strength is summed over a convoy as
-  `sum(crew) + sum(max(crew, artillery))`, using `field_40_crew` and
-  `field_120` (see [Ship Artillery](./basics/ship-artillery.md#combat-power)). For a prey
-  ship with no convoy the game uses plain `crew + artillery` instead, so putting a lone
-  ship into a one-ship convoy changes - and for an unarmed ship doubles - how strong it
-  looks.
-- Finally the distance: within 20 units it attacks, otherwise it sets course with
-  `0x00516840` and keeps closing.
-
-Neither cutlasses (`field_154_cutlasses`) nor the captain nor the ship's health enter this
-comparison. Health and the captain's navigation skill act on the *speed* term instead, and
-the captain's combat skill is not read here at all.
-
-## The Raid Cycle
-Measured across 27 battles in two campaigns, at 256 ticks per day:
-
-|Event|Value|
-|-|-|
-|A raiding party leaves its hideout with|counter 0 - free to strike at once|
-|Every observed battle against an AI ship began at|counter exactly 0|
-|Battles against a player's ship began at|0, and at 1956, 2158 and 2254 - 7.6 to 8.8 days|
-|A battle lasts|45..116 ticks, a quarter to half a day|
-|After a battle the counter is set to|`0xA00`, ten days (`0x0050C043`)|
-|...plus a further|`0x700`, seven days, when the pirate also heads home|
-|Rest observed|exactly 10.00 or 17.00 days, nine of each, nothing between|
-|Raids world-wide with two or three parties active|roughly one a week|
-
-The seven extra days come from `0x0050603A`, which adds them when the pirate is given its
-hideout as a destination; that value then reaches the convoy counter because
-`0x00501CC1` loads `convoy+0x16` back out of the acting ship's `field_138`.
-
-What sends a pirate home is a fitness check, not a timer. In `0x00505C90` it breaks off
-when its health drops below 80% of maximum or its artillery falls under 18 power - two
-small catapults' worth (`0x00505D43`). 80% is exactly where the speed term stops
-saturating, so a raider retreats at the moment damage starts costing it speed.
-
-The practical consequence of the counter is an asymmetry in the player's disfavour: an AI
-merchant's ship can only be taken in the single tick the counter is zero, while a player's
-ship is fair game for a nine-day window in every cycle.
+- [Bands and Hideouts](./pirates/bands.md) - where raiders come from, where they go to be
+  repaired, and what a homecoming pays out.
+- [The Pirate AI](./pirates/ai.md) - how a raider at sea picks a target, decides whether to
+  attack it, and paces its raids.
 
 ## Ship Fields
 |Field|Meaning|

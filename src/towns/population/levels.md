@@ -75,4 +75,4 @@ class Town:
 ```
 
 For a fixed number of total inhabitants and satisfactions, the groups converge:
-![image](levels1.png)
+![image](./levels1.png)

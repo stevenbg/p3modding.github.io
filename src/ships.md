@@ -106,7 +106,7 @@ changing one thing at a time and diffing the struct:
 |Field|Meaning|
 |-|-|
 |`field_40_crew`|sailors aboard; `0x005184F0` derives the complement as `max(20, capacity/2000 + upgrade_level * class_factor)`, the class factors being 3, 5, 8, 10 (first dword of the per-class blocks at `0x0066E030`, stride `0x18`). `capacity/2000` is the capacity in loads, so a ship's crew is roughly its load capacity.|
-|`field_154_cutlasses`|cutlasses aboard (they are not [ship weapons](./basics/ship-artillery.md))|
+|`field_154_cutlasses`|cutlasses aboard (they are not [ship weapons](./reference/ship-artillery.md))|
 |`field_11C_equipment_weight`|the cargo space all of that occupies|
 
 `field_11C_equipment_weight` is the sum of three terms:
@@ -130,7 +130,7 @@ ware's cargo to a whole unit, then recomputes `field_114` (the payload's purchas
 `field_118` (used space), `field_11C` by exactly the formula above - `0x0051838A` for the
 crew term, `0x00518411` for the cutlasses term - and `field_120`, and **returns the free
 cargo space**. That return is the budget an
-[auto trade route stop](./auto-traders.md#running-a-route-stop) spends on loading.
+[auto trade route stop](./ships/trade-routes.md) spends on loading.
 
 ## Speed
 `0x00612930` computes a ship's current speed, and it is the number the

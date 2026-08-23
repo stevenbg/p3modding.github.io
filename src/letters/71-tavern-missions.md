@@ -35,7 +35,7 @@ title (`0x005D7FF2`); the body follows after that terminator. Escort and fugitiv
 missions share one script, so the title is what separates the kinds, not a type byte.
 
 ## The Mission Task
-The task lives in the [scheduled task](../scheduled-tasks/0000.md) pool `0x006DD73C` and
+The task lives in the [scheduled task](../scheduled-tasks.md) pool `0x006DD73C` and
 carries opcode `0x1B`; the side room refuses an offer whose task does not
 (`0x005A7279`). Running that task runs the mission's letter script: the opcode's handler
 enters the interpreter at `0x004ECF64`, which reads the task as

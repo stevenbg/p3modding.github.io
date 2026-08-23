@@ -11,40 +11,40 @@ Despite locks and even lock-free concurrent data structures being [well-understo
 The `execute_operations` function at `0x00546870` is not locking the current operations properly.
 
 The basic block at `0x005468B3` attempts to lock the current operations:
-![](multiplayer-locks-execute-operations-1.png)
+![](./multiplayer-locks-execute-operations-1.png)
 This is not how locks work.
 
 ### Insert Pending Operations
 The `insert_into_pending_operations_warpper` function at `0054AA70` is not locking the pending operations properly.
 
 The basic blocks at `0054AA79` attempt to lock the pending operations:
-![](multiplayer-locks-insert-pending-operation-1.png)
+![](./multiplayer-locks-insert-pending-operation-1.png)
 This is not now locks work.
 
 ### Client Ingress Queue
 The function at `0x0054B080` which moves operations from the ingress queue and the socket into the current operations is not locking the current operations properly at two locations.
 
 The basic block at `0x0054B13F` attempts to try-lock the current operations:
-![](multiplayer-locks-client-ingress-queue-1.png)
+![](./multiplayer-locks-client-ingress-queue-1.png)
 This is not how locks work.
 
 The basic block at `0x0054B200` attempts to try-lock the current operations:
-![](multiplayer-locks-client-ingress-queue-2.png)
+![](./multiplayer-locks-client-ingress-queue-2.png)
 This is not how locks work.
 
 ### Client Pending Operations
 The function at `0x0054AFA0` which sends operations from the pending operations to the host is not locking the current operations properly:
-![](multiplayer-locks-client-pending-operations-1.png)
+![](./multiplayer-locks-client-pending-operations-1.png)
 This is certainly not how locks work.
 
 ### Host Egress Queue
 The function at `0x0054B670` which moves operations from the host's pending operations and the client sockets into the egress queue is not locking the pending operations properly:
-![](multiplayer-locks-host-egress-queue-1.png)
+![](./multiplayer-locks-host-egress-queue-1.png)
 This is not how locks work.
 
 ### Host Ingress Queue
 The function at `0x0054B960` which moves operations from the host's egress and ingress queues into the current operations is not locking the current operations properly:
-![](multiplayer-locks-host-ingress-queue-1.png)
+![](./multiplayer-locks-host-ingress-queue-1.png)
 This is not how locks work.
 
 ## Fix

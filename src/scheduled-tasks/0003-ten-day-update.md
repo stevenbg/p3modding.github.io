@@ -1,40 +1,40 @@
 # Ten-Day Update
-The task with opcode `0x03` (`0x004DDA40`) is a periodic sweep over several subsystems.
-The dispatcher reschedules it at `0x004D8668` with `due += 0xA00` = 2560
-[ticks](../basics/time.md), so it runs **once every ten days**.
+The task with opcode `0x03` (`0x004DDA40`) is a periodic sweep over several subsystems. The
+dispatcher reschedules it at `0x004D8668` with `due += 0xA00` = 2560 [ticks](../time.md), so
+it runs **once every ten days**.
 
 This page covers the part of it that maintains the world's
-[auto traders](../auto-traders.md): the call to `0x004DCEA0`, which is the only thing in
-the game that grows a captain over time.
+[auto traders](../auto-traders.md): the call to `0x004DCEA0`, which is the only thing in the
+game that grows a captain over time.
 
-## What one run does
+## What One Run Does
 For every merchant, for every ship of that merchant:
 
 - skip the ship if its status is `0x11`, if it carries no valid captain index, or if the
   captain's index does not belong to this run's **group** (below);
-- retire the captain if he is old enough (below);
+- [retire](../auto-traders/retirement.md) the captain if he is old enough;
 - give the captain a skill gain, through
   [operation `0x12`](../operations/0012-auto-trader-skill-gain.md).
 
-Then, **only for a human merchant** (`merchant+0x8` = 0), for every office of that
-merchant (`merchant+0xC`, chained through `office+0x2C8`): with the same group filter and
-a `(rand & 0x3FF) < 0x1B3` roll, raise the administrator's trade skill by one level
-through [operation `0x67`](../operations/0067-administrator-skill-gain.md).
+Then, **only for a human merchant** (`merchant+0x8` = 0), for every office of that merchant
+(`merchant+0xC`, chained through `office+0x2C8`): with the same group filter and a
+`(rand & 0x3FF) < 0x1B3` roll, raise the
+[administrator's](../auto-traders/administrators.md) trade skill by one level through
+[operation `0x67`](../operations/0067-administrator-skill-gain.md).
 
-Nothing requires a ship to be sailing, carrying cargo or doing anything at all, and a
-record sitting in a tavern is never reached - the sweep only ever walks merchants' ship
-chains.
+Nothing requires a ship to be sailing, carrying cargo or doing anything at all, and a record
+sitting in a tavern is never reached - the sweep only ever walks merchants' ship chains.
 
-### The two growth paths
+## The Two Growth Paths
 The owner's control word decides which.
 
 An **AI merchant's** captain (`merchant+0x8` non-zero) gets a flat `8` in both gain fields,
 applied by calling the operation switch `0x00535760` directly - no queue, and no threshold
-test at all. All three of his skills rise by 8 whenever his group comes up, until each
-meets its own ceiling.
+test at all. All three of his skills rise by 8 whenever his group comes up, until each meets
+its own ceiling.
 
-A **human player's** captain (`merchant+0x8` = 0) gets one roll of `rand & 0x3FF`, taking
-one of three branches:
+A **human player's** captain (`merchant+0x8` = 0) gets one roll of `rand & 0x3FF`, taking one
+of three branches:
 
 |Roll|Gain field written|Skill whose threshold is tested|
 |-|-|-|
@@ -43,79 +43,45 @@ one of three branches:
 |`0x2AA`..`0x3FF`|trade and combat|combat|
 
 The gain is `rand % 51`, so `0`..`50`. Nothing is enqueued unless the skill in the third
-column is **below the record's navigation ceiling** `T`: the enqueuer reads a second copy
-of the ceiling table at `0x00672824`, indexed with the run's group, which for a ship that
-passed the group filter is the record's own `index & 3`. The ship is skipped before the
-roll if all three skills have already reached `T`. The two lower branches differ only in
-which threshold they test, because
-[both write the same field](../operations/0012-auto-trader-skill-gain.md#trade-and-combat-share-one-gain-field).
+column is **below the record's navigation ceiling** `T`: the enqueuer reads a second copy of
+the [ceiling table](../auto-traders/skill.md#the-ceiling-belongs-to-the-slot) at
+`0x00672824`, indexed with the run's group, which for a ship that passed the group filter is
+the record's own `index & 3`. The ship is skipped before the roll if all three skills have
+already reached `T`. The two lower branches differ only in which threshold they test,
+because [both write the same field](../auto-traders/skill.md#trade-and-combat-share-one-gain-field).
+
+Which of those branches a captain's career actually ends on - and why a slot's trade and
+combat ceilings are often unreachable - is
+[Where a Captain Ends Up](../auto-traders/skill.md#where-a-captain-ends-up).
 
 Each enqueue also costs one slot of the operation queue's headroom
-(`0x34 - [0x006DF346]`, read once at the top of the run); once that is spent the rest of
-the run is silently dropped.
+(`0x34 - [0x006DF346]`, read once at the top of the run); once that is spent the rest of the
+run is silently dropped.
 
-#### What that means for a captain's final skills
-Navigation is simple: its rolls fire while navigation is below `T`, and `T` is also
-navigation's own ceiling, so navigation ends at exactly `T`.
-
-Trade and combat are not. A roll on either pays **both**, so the pair keeps growing while
-the **lower** of the two is below `T` - the laggard's rolls carry the leader along, past `T`
-and on toward the leader's own ceiling, where the clamp stops it. Once both are at or above
-`T` neither branch can fire again and both freeze wherever they stand. The last gain before
-that comes from just under `T` and is at most 50, so the lower of the two ends somewhere in
-`T`..`T+49` and stays there for the rest of the captain's life.
-
-One slot therefore produces very different careers. Take a record whose navigation ceiling
-is 150 and whose trade and combat ceilings are both 250:
-
-|Skills as created|Where they end up|
-|-|-|
-|trade and combat both low|they cross 150 together and stop between 150 and 199 - displayed level 3 or 4, never the level 5 their own ceilings would allow|
-|trade 170, combat 15|combat's rolls keep paying trade, which reaches its 250 ceiling and is clamped there, while combat is dragged up to 150..199 - so trade does finish at level 5|
-
-Measured on a live save: a captain with `T` = 150 took combat from 205 to 240 over nine
-months purely because his trade was sitting at 16, and both will stop the moment that trade
-reaches 150.
-
-### Retirement
-`field_4` of an auto-trader record is a birth stamp in ticks: the initializer writes
-`game_time - offset` with `offset = 46720 * (48..79) + 1792 * (0..31)`, an age of 24.0 to
-40.1 years at creation. A run retires a captain once that age passes `0x474A00` ticks =
-18,248 days, almost exactly **50 years**, and only if `field_E` is still clear:
-
-- an **AI** merchant's captain is retired at once - schedule task `0x27` (`0x004DDC00`)
-  three hours out, set `field_E`;
-- a **human** player's captain gets a roll instead: `(rand & 0x3FF) * (age >> 13)`,
-  floored to a multiple of 1024, must exceed `0x93000`. The product cannot clear that bar
-  until the captain is about 51.6 years old, and the chance grows from there. When it
-  fires it enqueues
-  [operation `0x13`](../operations/0013-captain-retirement.md), which schedules the same
-  task and sends the player a message.
-
-## The group, the counter, and the annual halt
+## The Group, the Counter, and the Annual Halt
 A run does not touch every captain. It only looks at records whose `index & 7` equals a
-**group** number, so a given captain comes up about every eighth run - roughly every 80
-days, four times a year.
+**group** number, so a given captain comes up about every eighth run - roughly every 80 days,
+four times a year.
 
 The group is `counter & 7`, and the counter lives in the task's **own data** at `+0x8`:
 
 - a run landing on a **day of the year below 10** resets it to `0`;
 - any other run increments it by one;
-- **if it is above `0x1F` the routine returns immediately** - no captain is looked at, no
-  one ages, no administrator gains.
+- **if it is above `0x1F` the routine returns immediately** - no captain is looked at, no one
+  ages, no administrator gains.
 
-A year holds about 36.5 runs, so the counter normally walks `0` to `~36` and the last
-handful of runs in each year do nothing at all.
+A year holds about 36.5 runs, so the counter normally walks `0` to `~36` and the last handful
+of runs in each year do nothing at all.
 
-The counter is part of the saved game, and a scenario can therefore ship with it already
-past the cut-off. Measured on the stock campaign starting 1 April 1362: the counter reads
-**117** at the campaign's own start date, and because that year's one run inside the reset
-window falls before the start date, the next reset is 1 January 1363. For those nine
-months no captain in that campaign grows, ages, or gains administrator skill. A save from
-the same campaign 259 days after the reset showed 35 records being cut back to their
-ceilings once the sweep resumed. An open-ended game starts the counter at `0` and a
-campaign starting in 1305 was measured resetting every year, so this is a property of the
-scenario, not of campaigns in general.
+The counter is part of the saved game, and a scenario can therefore ship with it already past
+the cut-off. Measured on the stock campaign starting 1 April 1362: the counter reads **117**
+at the campaign's own start date, and because that year's one run inside the reset window
+falls before the start date, the next reset is 1 January 1363. For those nine months no
+captain in that campaign grows, ages, or gains administrator skill. A save from the same
+campaign 259 days after the reset showed 35 records being cut back to their ceilings once the
+sweep resumed. An open-ended game starts the counter at `0` and a campaign starting in 1305
+was measured resetting every year, so this is a property of the scenario, not of campaigns in
+general.
 
 ## Interval
 Rescheduled by the dispatcher, not by the handler: `due += 0xA00`, so every ten days.

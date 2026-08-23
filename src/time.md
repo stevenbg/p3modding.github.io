@@ -1,7 +1,7 @@
 # Time
 The game time is stored in the static `game_world` struct at offset `0x14` as *ticks*, and is increased by the `advance_time` function at `0x00530E80`.
 That function has exactly one caller: the inline handler of the
-[Advance Time operation](../operations/00c4-advance-time.md) - game time only ever
+[Advance Time operation](./operations/00c4-advance-time.md) - game time only ever
 advances through the operation queue.
 
 ## Ticks
@@ -25,7 +25,7 @@ month starts and ends - to find the month, and subtracts that month's start to g
 of the month.
 
 The day of the year is read by game logic, not just by the interface: the
-[ten-day update](../scheduled-tasks/0003-ten-day-update.md) resets its round counter on any
+[ten-day update](./scheduled-tasks/0003-ten-day-update.md) resets its round counter on any
 run that lands in the first ten days of a year.
 
 ## Ticking Objects
@@ -33,7 +33,8 @@ Different game objects tick at different intervals.
 Information about what happens in those ticks can be found in the respective chapters.
 
 ### Towns
-Towns tick if one of the following equations is true:
+The town tick handler is `handle_town_tick` at `0x0051BA10`. A town ticks if one of the
+following equations is true:
 ```c
 game_time & 0b111 == 0b011 &&
 town_index == (((unsigned __int8)game_time) + 255) >> 3
@@ -64,7 +65,7 @@ All facilities tick when their town ticks.
 
 ## Game Speed
 The tick pacer inside `execute_operations` (`0x00546640`) converts real
-milliseconds into [Advance Time operations](../operations/00c4-advance-time.md)
+milliseconds into [Advance Time operations](./operations/00c4-advance-time.md)
 once per frame. How many ticks a batch gets depends on the pacing *mode*
 (`operations+0x92C`) and its ms-per-tick divisor:
 
@@ -78,7 +79,7 @@ The six positions of the speed slider set the mode-0 divisor to 3515, 468, 351,
 234, 117 and 78 ms per tick (measured in vanilla 1.1); the slider never changes the
 mode. Entering the local map switches to mode 2, whose pace is a hard constant -
 which is why the speed controls have no effect there. All speed changes travel as
-the [Set Game Speed operation](../operations/00c8-set-game-speed.md), and
+the [Set Game Speed operation](./operations/00c8-set-game-speed.md), and
 `operations+0x914` is the master run flag the pacer requires (0 = paused).
 
 The same pacer also enqueues the autosave operation (`0xC2`) whenever the timer at

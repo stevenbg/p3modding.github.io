@@ -34,4 +34,4 @@ for y in range(0, height):
 
 imageio.imwrite('nav_matrix.png', image)
 ```
-![image](nav_matrix.png)
+![image](./nav_matrix.png)

@@ -30,7 +30,7 @@ def calc_raw_damage(distance: int, artillery_type: int):
             * damage2[artillery_type])
 ```
 The following image shows the plot of raw damage and distance, with the damage values of double slot weapons adjusted by `0.5`.
-![image](damage_raw.png)
+![image](./damage_raw.png)
 
 While every individual projectile is subject to minor source and destination adjustments, the distance raw damage calculation is done once for the entire volley.
 
@@ -42,7 +42,7 @@ def calc_scaled_damage(raw_damage: int):
 ```
 
 The precision loss caused by the division by 64 has a slight effect on the granularity:
-![image](damage_scaled.png)
+![image](./damage_scaled.png)
 
 While the function is called for every individual projectile, this calculation will yield the same values for every projectile of a volley.
 
@@ -58,7 +58,7 @@ def apply_captain_factor(scaled_damage: int, combat_experience: int):
 ```
 This factor is roughly (ignoring precision loss through divisions) equivalent to \\(\frac{3 * combat\\_experience}{850} + 1\\) or \\(0.17647058823 * combat\\_level + 1\\).
 The following figure highlights the impact of a captain on a projectile's damage:
-![image](damage_captain.png)
+![image](./damage_captain.png)
 
 While the function is called for every individual projectile, this calculation will yield the same values for every projectile of a volley.
 

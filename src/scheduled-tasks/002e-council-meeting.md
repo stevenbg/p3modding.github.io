@@ -54,7 +54,7 @@ pending_no -= pending_yes
 ```
 
 This causes the following relationship of citizens and military size:
-![](002e-council-meeting-approved-limits.png)
+![](./002e-council-meeting-approved-limits.png)
 
 ### Change Tax per Head
 TODO

@@ -29,4 +29,4 @@ for i in range(0, length):
 
 imageio.imwrite('nav_vec.png', image)
 ```
-![image](nav_vec.png)
+![image](./nav_vec.png)

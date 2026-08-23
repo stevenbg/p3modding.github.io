@@ -17,4 +17,4 @@ ships.
 
 Note what it does **not** do: the ship keeps its owner and its status. Both change later,
 when the ship actually puts to sea as a raider - see
-[Bands and Hideouts](../pirates.md#bands-and-hideouts).
+[Bands and Hideouts](../pirates/bands.md).

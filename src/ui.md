@@ -69,7 +69,7 @@ the node from the top, unlinks it via `0x0064E749`, notifies via vtable
 The stack is what runs the game: the main loop is
 `while (0x004B8A40(this = 0x006DA5F0) != -1)` (the loop itself at `0x004B70C0`),
 and each frame that method pumps messages, updates the
-[frame clock](./basics/time.md#the-frame-clock) and calls the TOP window's vtable
+[frame clock](./time.md#the-frame-clock) and calls the TOP window's vtable
 `+0xF4` (update) and `+0x12C` (`0x004B8B0D`). Scenes - scrollmap, town view, sea
 battle - are window objects on the same stack as the building windows and dialogs,
 so "which scene is the player looking at" is a read of the top node.
@@ -85,7 +85,7 @@ close/open slots at `+0x118`/`+0x120`.
 Its per-frame update (`+0xF4` = `0x0058B7F0`) drives the entire scene frame -
 simulation, battle AI, the wind (`0x006113C9`), the changed-rect submit
 (`0x004B9650`) - and paces the simulation purely by the
-[frame clock](./basics/time.md#the-frame-clock): neither the game tick nor the
+[frame clock](./time.md#the-frame-clock): neither the game tick nor the
 call count matters (calling the update several times per frame moves nothing).
 
 `+0xC324` holds the loaded map's id. Two loaders write it - `0x0058A733` stores the

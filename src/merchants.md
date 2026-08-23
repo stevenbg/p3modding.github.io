@@ -1,4 +1,33 @@
 # Merchants
+Every trading house in the game - the player's and the AI's alike - is one `merchant`
+record, `0x650` bytes, in the array at `game_world + 0x78`. The accessor is `0x005303C0`
+(thiscall on the game world, one argument), computing `[this+0x78] + index * 0x650`.
+
+|Page|Covers|
+|-|-|
+|[Ranks](./merchants/ranks.md)|the five ranks, their wealth and reputation requirements, and where a rank is stored|
+|[Reputation](./merchants/reputation.md)|how the per-town reputation figure is assembled, term by term|
+|[Sailors](./merchants/sailors.md)|sailor reputation, the per-town sailor pools, and how many sailors a tavern will actually offer|
+|[Trading Office](./merchants/trading-office.md)|the office record: its storage, its administrator orders and its lock bitmap|
+
+A merchant's [ships](./ships.md) are chained from `field_E`, his
+[offices](./merchants/trading-office.md) from `field_C`, and the captains and administrators
+he employs are [auto trader](./auto-traders.md) records elsewhere.
+
+## Human or AI
+`field_8_control_word` is **`0` for a human player and non-zero for an AI merchant** (game
+setup writes `0x8001` at `0x00544644`, `0x005446E5` and `0x005491D3`). Several systems
+branch on it: bit `0x4` marks the background merchants [pirates](./pirates.md) leave alone,
+it decides which growth path the ten-day sweep gives a merchant's
+[captains](./auto-traders/skill.md), and it gates whether that sweep touches his
+[administrators](./auto-traders/administrators.md) at all.
+
+## Home Town
+`field_19_hometown_index` is the town shown as "Home town" on the Personal screen: the town
+holding the merchant's home office. It changes when the player moves the home office and is
+distinct from the birth town shown in the same screen's date-of-birth line.
+
+## The Merchant Struct
 ```
 00000000 struct merchant // sizeof=0x650
 00000000 {                                       // XREF: merchant_wrapper/r
@@ -198,15 +227,3 @@
 0000064C     int field_64C;
 00000650 };
 ```
-
-`field_8_control_word` is **`0` for a human player and non-zero for an AI merchant** (game
-setup writes `0x8001` at `0x00544644`, `0x005446E5` and `0x005491D3`). Several systems
-branch on it: bit `0x4` marks the background merchants [pirates](./pirates.md) leave alone,
-it decides which growth path the ten-day sweep gives a merchant's
-[captains](./auto-traders.md#gaining-and-losing-skill), and it gates whether that sweep
-touches his administrators at all.
-
-`field_19_hometown_index` is the town shown as "Home town" on the Personal screen: the
-town holding the merchant's home office. It changes when the player moves the home
-office and is distinct from the birth town shown in the same screen's date-of-birth
-line.

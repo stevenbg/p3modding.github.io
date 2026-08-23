@@ -20,5 +20,5 @@ The administrator view draws the checkbox directly from the bitmap (reads at
 and the window's town).
 
 What the bit does once set is
-[`0x00500EC0`](../basics/office.md#what-the-lock-bit-does): it caps how much of the ware an
+[`0x00500EC0`](../merchants/trading-office.md#what-the-lock-bit-does): it caps how much of the ware an
 auto trader may load out of the office at `stock - minimum store quantity`.

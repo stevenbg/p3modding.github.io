@@ -1,11 +1,11 @@
 # Trading Office
-A trading office starts with a complete [storage](./storage.md) struct - the same layout
+A trading office starts with a complete [storage](../reference/storage.md) struct - the same layout
 towns use, so an office's stock of a ware is `office + 0x4 + ware*4` - and continues with
 office-specific fields after it. The whole record is `0x44C` bytes.
 
 |Offset|Type|Meaning|
 |-|-|-|
-|`0x000`|storage|the office's own [storage](./storage.md), stock at `+0x4 + ware*4`|
+|`0x000`|storage|the office's own [storage](../reference/storage.md), stock at `+0x4 + ware*4`|
 |`0x2C4`|u16|owning merchant index|
 |`0x2C6`|u8|town index|
 |`0x2C8`|u16|next office of the same merchant|
@@ -23,7 +23,7 @@ The order arrays are written by
 bitmap by [operation `0x66`](../operations/0066-office-autotrade-lock-change.md). There is
 no direction field: a positive price is a sell order's minimum price, a negative one a buy
 order's maximum price negated, and `0` means no order. What the administrator then does
-with them is in [Auto Traders](../auto-traders.md#the-administrators-trading).
+with them is in [Auto Traders](../auto-traders/administrators.md#the-administrators-trading).
 
 ## Average Purchase Price
 `0x004FF6F0` (thiscall on the office, arguments `(ware, quantity, price)`) is how goods

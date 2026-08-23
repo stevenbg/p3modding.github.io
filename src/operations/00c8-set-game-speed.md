@@ -1,5 +1,5 @@
 # Set Game Speed
-Operation `0xC8` changes the [game speed](../basics/time.md#game-speed) - every
+Operation `0xC8` changes the [game speed](../time.md#game-speed) - every
 speed control ends up enqueueing it.
 
 |Offset|Type|Value|

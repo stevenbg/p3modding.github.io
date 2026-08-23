@@ -1,7 +1,7 @@
 # Advance Time
 Operation `0xC4` advances the game time - the ONLY way it advances: its handler
 makes the executable's single call to `advance_time` (`0x00530E80`, see
-[Time](../basics/time.md)).
+[Time](../time.md)).
 
 |Offset|Type|Value|
 |-|-|-|
@@ -17,6 +17,6 @@ at `0x00547290`, and `0xC4`'s inline handler at `0x00546A1C` calls
 The operations are produced by the tick pacer inside `execute_operations`
 (`0x00546640`): once per frame it converts the real milliseconds elapsed since the
 last advance into a tick count according to the current
-[game speed](../basics/time.md#game-speed), and enqueues one `0xC4` for the batch.
+[game speed](../time.md#game-speed), and enqueues one `0xC4` for the batch.
 The same pacer enqueues the autosave operation (`0xC2`) whenever the autosave timer
 (`operations+0x940`, period `operations+0x944` - 180000 ms in vanilla) expires.

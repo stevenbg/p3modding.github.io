@@ -5,7 +5,7 @@ Incoming projectiles don't always damage weapons on the correct side of the ship
 
 ## Details
 The mapping between "left", "right" and "random" sides of the ship being hit is as follows:
-![](damage-to-offside-ship-artillery_hitbox.png)
+![](./damage-to-offside-ship-artillery_hitbox.png)
 
 ## Fix
 To get the correct results, the shape defined in the static hitbox table at `0x0067AB30` must rotate by one point.
@@ -57,4 +57,4 @@ must be replaced with this rotated variant:
 ```
 
 This will rotate the hitbox points, and define the following (correct) impact location mapping:
-![](damage-to-offside-ship-artillery_hitbox_fixed.png)
+![](./damage-to-offside-ship-artillery_hitbox_fixed.png)

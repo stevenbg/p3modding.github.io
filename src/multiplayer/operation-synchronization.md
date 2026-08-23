@@ -1,6 +1,6 @@
 # Operation Synchronization
 The following flowchart illustrates the logical path of an operation through the different P3s and data structures:
-![](operation-synchronization.svg)
+![](./operation-synchronization.svg)
 
 The ingress queues are skipped, if the current operations have enough free capacity.
 Green denotes the sending client, blue denotes the hosting client, and orange denotes a receiving client.

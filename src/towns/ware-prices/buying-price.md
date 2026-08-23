@@ -47,7 +47,7 @@ Let's assume we buy pig iron from a town with the following thresholds:
 |t3|80000|
 
 If we buy one bundle (2000), the resulting prices at different stock levels would be:
-![image](buying-price-pigiron.png)
+![image](./buying-price-pigiron.png)
 
 ## Auto Trader Discount
 Auto traders (captains and administrators) get a discount depending on their trade skill.
@@ -55,7 +55,7 @@ The discount is calculated as follows:
 ```python
 100 - (2 * (50 - xp // 43))
 ```
-![image](buying-price-autotrader-discount.png)
+![image](./buying-price-autotrader-discount.png)
 
 The calculation can be observed at `0x004D5347` for captains and at `0x004FF7E8` for administrators.
 Since a new discount is unlocked every 43 experience, auto traders reach the maximum discount at 215 experience, way before they reach level 5 at 250 experience.

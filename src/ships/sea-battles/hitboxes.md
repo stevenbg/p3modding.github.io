@@ -9,7 +9,7 @@ Hitboxes are defined in a static ship hitbox table at `0x0067AB30`:
 |Hulk|(-22, -25)|(0, -67)|(22, -25)|(19, 81)|(-19, 81)|
 
 It creates the following shapes of ships facing north:
-![](hitboxes.png)
+![](./hitboxes.png)
 
 ## Projectile Collisions
 The `get_sea_battle_projectile_impact_direction` function at `0x0060A73C` determines whether and where a ship is hit by a projectile.
@@ -22,7 +22,7 @@ Then it adds the rotated hitbox coordinates to the ship coordinates, and transfo
 \\[x_{hitbox}'' = x_{ship} + x_{hitbox}'' - x_{projectile}\\]
 \\[y_{hitbox}'' = y_{ship} + y_{hitbox}'' - y_{projectile}\\]
 
-![](hitboxes_transformation.png)
+![](./hitboxes_transformation.png)
 
 Finally it calculates the intersection (if any) of all ship hitbox lines and the line from the projectile's current position to its future position at the next tick, and decides whether the ship was hit on the port, starboard or a random side.
 
@@ -49,6 +49,6 @@ The jump table at `0x0060AD69` maps intersections of the projectile's path with 
 |Point 2 to Point 3|Random|
 
 This defines the following line-to-location mapping:
-![](hitboxes_impact_location.png)
+![](./hitboxes_impact_location.png)
 
 **The mapping is incorrect, as discussed in the Known Bugs chapter.**

@@ -59,4 +59,4 @@ Let's assume we sell pig iron to a town with the following thresholds:
 |t3|80000|
 
 If we sell one bundle (2000), the resulting prices at different stock levels would be:
-![image](selling-price-pigiron.png)
+![image](./selling-price-pigiron.png)

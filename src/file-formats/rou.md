@@ -40,7 +40,7 @@ The ware order array is a **sequence of ware indices**, not a set of flags: it i
 in which the stop's instructions are carried out. Entries outside `0..0x17` are skipped
 rather than ending the sequence, and a ware whose amount is `0` carries no instruction. The
 order only sequences wares within each of the two passes the executor makes over it - see
-[Running a Route Stop](../auto-traders.md#running-a-route-stop) for what actually happens
+[Running a Route Stop](../ships/trade-routes.md) for what actually happens
 at a stop.
 
 ## Action Byte

@@ -1,5 +1,8 @@
 # Charge
-Charge letters are sent by criminal investigation scheduled tasks.
+Charge letters are [messages](../letters.md) of type `0x0A`, sent by
+[criminal investigation](../scheduled-tasks/0005-criminal-investigation.md) scheduled
+tasks. The task writes the type byte at `0x004E5CEB` before handing the message to
+`add_message`.
 
 ## Text
 A charge letter always starts with *Today, you have been charged for the following reason*.

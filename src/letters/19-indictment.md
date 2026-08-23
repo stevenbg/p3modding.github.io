@@ -1,5 +1,8 @@
 # Indictment
-Indictment letters are sent by criminal investigation scheduled tasks.
+Indictment letters are [messages](../letters.md) of type `0x19`, sent by
+[criminal investigation](../scheduled-tasks/0005-criminal-investigation.md) scheduled
+tasks. The task writes the type byte at four sites (`0x004E5C3C`, `0x004E5C54`,
+`0x004E5C7D`, `0x004E5D0F`) before handing the message to `add_message`.
 
 ## Text
 The text depends on the crime type:

@@ -9,4 +9,4 @@ The `ui_prepare_market_hall_window_production_page` function at `0x005DE960` doe
 ## Fix
 Replacing the two basic blocks which prepare the market hall page (`0x005DEA18` for barrel wares and `0x005DEA73` for bundle wares) with a copy that does an additional `imul` instruction solves this issue.
 
-![](market-hall-production-town.png)
+![](./market-hall-production-town.png)

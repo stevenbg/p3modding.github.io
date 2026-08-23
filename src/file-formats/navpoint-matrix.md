@@ -100,4 +100,4 @@ for x, y in vector:
 
 image.save("matrix_int.png", "PNG")
 ```
-![image](matrix_int.png)
+![image](./matrix_int.png)

@@ -1,6 +1,7 @@
 # Captain Retirement
 Operation `0x13` retires the [auto trader](../auto-traders.md) commanding a ship once he
-is old enough, and tells the player about it.
+is old enough, and tells the player about it. What decides "old enough" is on
+[Retirement](../auto-traders/retirement.md).
 
 |Offset|Type|Value|
 |-|-|-|
