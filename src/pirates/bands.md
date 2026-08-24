@@ -2,7 +2,7 @@
 The ships container holds up to five **band** objects, pointers at `0x006DD7AC`
 (container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them, where `n`
 is the **Pirates activity** setting: the byte at `[[0x006CC3E8] + 0x13]`, holding **0 for
-low, 1 for normal and 2 for high** - the Game settings dropdowns are 1-based on screen and
+low, 1 for normal and 2 for high** (see [Game Settings](../reference/game-settings.md)) - the Game settings steppers are 1-based on screen and
 stored one lower (`0x0049935B` copies it from `[window+0x1B90]`). That gives one, three or
 five bands, and five is why the game reserves exactly five band slots. "Difficulty" is
 only a preset over the individual settings: `0x00463B20` writes one value into all of

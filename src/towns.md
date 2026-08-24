@@ -1,4 +1,7 @@
 # Towns
+What a town makes, and how buildings come to exist in it, have pages of their own:
+[Production](./towns/production.md) and [Construction](./towns/construction.md).
+
 P3 has 40 different towns, which are assigned to one of 5 different regions:
 
 |Id|Name|
@@ -118,15 +121,15 @@ The following fields have been identified:
 000002C4 field_2C4 dw ?
 000002C6 field_2C6_land_tax dw ?
 000002C8 field_2C8_town_flags dd ?
-000002CC field_2CC dd ?
+000002CC field_2CC_whaling_productivity dd ? ; whaling's productivity grade on the same 1024/768/0 scale as a facility's field_8, kept here because whaling has no facility slot. Written by 0x00545961 from bit 0x20000 of the scenario's ware bitmaps, and used as the efficiency term for whale oil - see Towns > Production
 000002D0 field_2D0_celebration_timestamp dd ?
 000002D4 field_2D4_total_citizens dd ?
 000002D8 field_2D8_citizens dd 4 dup(?)
 000002E8 field_2E8_citizens_old dd 4 dup(?)
-000002F8 field_2F8_citizens_dwellings_occupied dw 3 dup(?)
+000002F8 field_2F8_citizens_dwelling_capacity dw 3 dup(?) ; a per-class CEILING, not a count: the population levels routine clamps each class's computed target to it at 0x0051C6EA, with a floor of 10 where the ceiling is below 10. Who writes it is not identified. See Towns > Population
 000002FE db ? ; undefined
 000002FF db ? ; undefined
-00000300 field_300_citizens_satisfaction dw 4 dup(?)
+00000300 field_300_citizens_satisfaction dw 4 dup(?) ; SIGNED i16 - read with movsx at 0x0050E651 onward, where a negative weighted sum penalises the construction workforce
 00000308 field_308 dw 4 dup(?)
 00000310 field_310_daily_consumptions_citizens dd 24 dup(?)
 00000370 field_370 dd ?
@@ -155,7 +158,7 @@ The following fields have been identified:
 000003CC field_3CC dd ?
 000003D0 field_3D0_wares_copy dd 24 dup(?)
 00000430 field_430_unknown_wares_data dd 24 dup(?)
-00000490 field_490_daily_production dd 24 dup(?) ; raw units/day at FULL utilization (nominal capacity; facilities count by existence, staffing ignored - verified down to 0% utilization); t2 = t1 + 10 days of this; nonzero exactly for the wares the town produces. The market hall window shows actual staffing-scaled output instead, which is why the two differ
+00000490 field_490_daily_production dd 24 dup(?) ; NOMINAL capacity in raw units/day: the accumulation at 0x0050EB4A omits the employees term that the actual figure at +0xC4 includes, so staffing is ignored entirely (verified down to 0% utilization). Covers EVERY facility in the town, merchant-owned ones included - measured via bricks, where +0x490 minus +0xC4 equals the merchants' nominal capacity. t2 = t1 + 10 days of this. See Towns > Production
 000004F0 field_4F0_consumption_data consumption_data 24 dup(?)
 00000670 field_670 dd ?
 00000674 field_674 dd ?
@@ -209,9 +212,11 @@ The following fields have been identified:
 00000750 field_750 dd ?
 00000754 field_754 dd ?
 00000758 field_758 dd ?
-0000075C field_75C dd ?
-00000760 field_760 dd ?
-00000764 field_764 dd ?
+0000075C field_75C_construction_sites dd ? ; base of the town's construction site array, stride 8 - see Construction
+00000760 field_760_construction_freelist dw ? ; +0x760 freelist head, +0x762 walk cursor
+00000762 field_762_construction_cursor dw ?
+00000764 field_764_completed_structures dw ? ; +0x764 and +0x768 chain completed town-owned structures
+00000766 field_766 dw ?
 00000768 field_768 dd ?
 0000076C field_76C_more_flags dd ?
 00000770 field_770 db ?
@@ -219,7 +224,7 @@ The following fields have been identified:
 00000772 field_772 db ?
 00000773 field_773 db ?
 00000774 field_774 dw ?
-00000776 field_776 dw ?
+00000776 field_776_construction_sites_size dw ?
 00000778 field_778 dd ?
 0000077C field_77C dd ?
 00000780 field_780 dd ?
@@ -235,9 +240,9 @@ The following fields have been identified:
 00000792 field_792_streets_total dw ?
 00000794 field_794_church church ?
 000007A4 field_7A4_town_class1 town_class1 ?
-00000810 field_810 dd ?
-00000814 field_814 dd ?
-00000818 field_818 dd ?
+00000810 field_810_shipyard_experience dd ? ; start of the town's shipyard block. Its magnitude sets the Weaponsmith's weapon tier, min(5, experience/420000 + 2) at 0x0052BB00 - see Towns > Production
+00000814 field_814_shipyard_pending_experience dd ?
+00000818 field_818_shipyard_utilization_markup dd ? ; f32
 0000081C field_81C dd ?
 00000820 field_820 dd ?
 00000824 field_824_current_ship_level db 4 dup(?)
@@ -254,11 +259,7 @@ The following fields have been identified:
 0000083D field_83D db ?
 0000083E field_83E db ?
 0000083F field_83F db ?
-00000840 field_840_class12_array class12 20 dup(?)
-00000980 field_980 dd ?
-00000984 field_984 dd ?
-00000988 field_988 dd ?
-0000098C field_98C dd ?
+00000840 field_840_facilities facility 21 dup(?) ; 21 slots, indexed BY FACILITY TYPE: the constructor 0x005100F0 writes the slot index into field_6_type, and both the town tick (0x0051BB72) and world setup (0x00545EE4) iterate exactly 21. Spans 0x840..0x98F - see Production
 00000990 field_990_outrigger_value dd ?
 00000994 field_994_outrigger_id dw ?
 00000996 field_996 dw ?

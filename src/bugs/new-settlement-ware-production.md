@@ -6,6 +6,12 @@ Due to an [off-by-one error](https://en.wikipedia.org/wiki/Off-by-one_error), a 
 ## Details
 The `determine_new_settlement` function at `0x00532E30` calculates the wares with the biggest need.
 Then it attempts to build a bitmap in which a `1` denotes that the nth production facility should be effective.
+That bitmap is the *effective* one of the two consumed by `0x005458D0`, which turns them into
+each facility's `field_8_productivity` - see
+[Effective and Ineffective Production](../towns/production.md#effective-and-ineffective-production).
+Bit `n` there means facility type `n + 4`, which is why the subtraction has to be `4`.
+
+`ware_to_prod_mapping` is the byte table at `0x00672C88`, indexed by ware id.
 This is pseudeocode of the bit position calculation:
 
 ```c

@@ -1,7 +1,15 @@
 # Satisfaction
 P3's setting "Needs of the citizens" changes how easy it is to increase the satisfaction, and how fast it changes.
 The *satisfaction classes* are displayed in-game: *Very happy*, *happy*, *very satisfied*, *satisfied*, *dissatisfied*, and *annoyed*.
-The satisfaction for each population type is stored in the town's *satisfactions* array at offset `0x300`, holding an `i16` for every population type except Beggars.
+The satisfaction for each population type is stored in the town's *satisfactions* array at offset `0x300`, holding a **signed** `i16` for every population type - beggars included, at `+0x306`.
+The beggar entry exists but `update_citizen_satisfaction` never maintains it, which is what
+makes the [siege beggar satisfaction bug](../../bugs/siege-beggar-satisfaction-bonus.md)
+permanent: nothing ever brings it back down. Measured across 24 towns, it reads `-20` in 21
+of them and `60` in the three that have repelled sieges.
+
+The three maintained entries are read as signed elsewhere too - the
+[construction workforce](../construction.md) target subtracts a weighted sum of them when it
+is negative.
 The function `prepare_citizens_menu_ui` at `0x0040B570` calculates the satisfaction classes by converting the `i16` into an `f32`, and picking the highest applicable class:
 
 |Satisfaction >|Satisfaction Class|

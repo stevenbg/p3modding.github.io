@@ -72,6 +72,7 @@ The following operations have been identified:
 |0x02|Buy Wares to Ship|
 |0x03|Repair Ship|
 |0x04|Hire Sailors|
+|0x05|Pay Off Ship's Crew|
 |0x06|Dismiss Captain|
 |0x15|Create Convoy|
 |0x16|Disband Convoy|
@@ -87,6 +88,7 @@ The following operations have been identified:
 |0x32|Donate to Church|
 |0x37|Join Guild|
 |0x39|Bathe|
+|0x40|Disband Militia Squad|
 |0x41|Form Militia Squad|
 |0x42|Bath House Bribe Success|
 |0x43|Bath House Bribe Failure|

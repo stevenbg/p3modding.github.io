@@ -1,6 +1,12 @@
 # Levels
 The `town_update_population_levels` function at `0x0051C650` determines how many citizens are promoted and demoted and how many poor citizens emigrate.
 
+This only ever **redistributes**. The three working classes gain and lose people only through
+the discrete transfers described in
+[Population](../population.md#population-is-four-times-the-number-of-jobs), four at a time per
+job, so promotion and demotion move citizens between rich, wealthy and poor without changing
+their total - the poor pool being the reservoir the other two draw from.
+
 The following pseudocode denotes the calculation:
 ```python
 class Town:

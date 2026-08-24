@@ -135,7 +135,9 @@ fn update_town_price_thresholds(town) {
 
     // Set t2 and t3 except for bricks and weapons: t2 adds ten days of the town's
     // production array (town+0x490, raw units/day; verified in-game across several
-    // towns via t2 - t1). The array holds NOMINAL production at full utilization:
+    // towns via t2 - t1). See Towns > Production for how that array is filled and how
+    // it differs from the actual output the market hall shows.
+    // The array holds NOMINAL production at full utilization:
     // it is nonzero exactly for the wares the town produces and ignores facility
     // staffing completely, while the market hall window shows the actual
     // staffing-scaled output (verified: dropping a sawmill to 50% and then 0%

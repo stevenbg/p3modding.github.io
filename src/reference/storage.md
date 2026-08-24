@@ -10,7 +10,7 @@ Some of the fields have been identified:
 00000002 field_2         dw ?
 00000004 field_4_current_wares dd 24 dup(?)
 00000064 field_64_daily_consumptions_businesses dd 24 dup(?)
-000000C4 field_C4_daily_production dd 24 dup(?)
+000000C4 field_C4_daily_production dd 24 dup(?) ; ACTUAL output per day, staffing-scaled; a daily accumulator the owner's tick zeroes. On a town this is the market hall's "Town" column, on an office its "Trader" contribution - see Production
 00000124 field_124_ship_weapons dd 6 dup(?)
 0000013C field_13C_prod_time_series storage_production_time_series 20 dup(?)
 0000027C field_27C       dd ?

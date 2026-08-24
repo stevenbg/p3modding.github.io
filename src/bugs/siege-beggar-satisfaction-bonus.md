@@ -10,6 +10,12 @@ However, the `tick_siege` function at `0x00629A50` gives every population type *
 
 Since the beggar satisfaction is influencing the beggar immigration, this bug has a gameplay impact: The more sieges a town wins, the more beggars it will attract.
 
+Measured in a live campaign, the effect is large. Of 24 towns, 21 had a beggar satisfaction of
+`-20` and held **8** beggars each; the three that read `60` held **122, 125 and 141**. Two of
+those three were caught mid-climb - over 68 days one rose from 30 to 141 and another from 15
+to 125, roughly 1.6 beggars a day - while every town at `-20` stayed flat at 8. See
+[Population](../towns/population.md#beggars).
+
 ## Fix
 The following code distributes the satisfaction bonus, where `edx` contains the (decrementing) loop variable, `ecx` the current population type and `eax` the (u16) offset in the towns array.
 ```asm
