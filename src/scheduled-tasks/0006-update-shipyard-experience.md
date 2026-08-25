@@ -21,7 +21,7 @@ The `shipyard_level_requirements` table at `0x00673818` defines the following *b
 |Snaikka|0|100|300|1050|
 |Crayer|0|100|600|900|
 |Cog|0|200|400|800|
-|Holk|300|500|600|1200|
+|Hulk|300|500|600|1200|
 
 A new quality level is unlocked, if the shipyard's experience exceeds `2800 * required_base_experience`.
 

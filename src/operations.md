@@ -18,7 +18,7 @@ The function `schedule_operation` at `0x00543F10` inserts an operation at the ne
 
 ## Execution
 The function `execute_operations` at `0x00546870` removes up to 53 operations from `operations` and executes them.
-Opcodes below `0xC1` go through the operation switch at `0x00535760` (called from the single site `0x00546934`); opcodes `0xC1..0xD4` never reach the switch - `execute_operations` handles them inline through its own jump table at `0x00547290`. The high family covers session control: `0xC2` autosave, [`0xC4` advance time](./operations/00c4-advance-time.md), [`0xC8` set game speed](./operations/00c8-set-game-speed.md).
+Opcodes below `0xC1` go through the operation switch at `0x00535760` (reached from `execute_operations` at `0x00546934`, and from 24 further call sites - world setup drives handlers directly through the same switch); opcodes `0xC1..0xD4` never reach the switch - `execute_operations` handles them inline through its own jump table at `0x00547290`. The high family covers session control: `0xC2` autosave, [`0xC4` advance time](./operations/00c4-advance-time.md), [`0xC8` set game speed](./operations/00c8-set-game-speed.md).
 
 ## Debugging
 The following IDC script adds scripted breakpoints to the executing and scheduling functions, allowing the investigation of P3's operation behavior:

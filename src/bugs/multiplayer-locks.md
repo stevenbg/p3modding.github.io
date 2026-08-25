@@ -15,9 +15,9 @@ The basic block at `0x005468B3` attempts to lock the current operations:
 This is not how locks work.
 
 ### Insert Pending Operations
-The `insert_into_pending_operations_warpper` function at `0054AA70` is not locking the pending operations properly.
+The `insert_into_pending_operations_warpper` function at `0x0054AA70` is not locking the pending operations properly.
 
-The basic blocks at `0054AA79` attempt to lock the pending operations:
+The basic blocks at `0x0054AA79` attempt to lock the pending operations:
 ![](./multiplayer-locks-insert-pending-operation-1.png)
 This is not now locks work.
 
@@ -89,7 +89,7 @@ This can be achieved by replacing the respective `mov` instruction with a call i
 To fix the problem at `0x0054B90D` the following changes have to be made:
 - The "locking" basic block at `0x0054B90D` must correctly lock the pending operations.
 This can be achieved by inserting a call to a proper lock function.
-- The "unlocking" instruction at `0x0x0054B949` must correctly unlock the pending operations.
+- The "unlocking" instruction at `0x0054B949` must correctly unlock the pending operations.
 This can be achieved by inserting a call to a proper unlock function.
 
 ### Host Ingress Queue

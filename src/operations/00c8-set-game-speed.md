@@ -18,9 +18,9 @@ operation switch.
 The handler also sets the master run flag `operations+0x914` to 1 - unless a
 network round is pending (`operations+0x928` nonzero), in which case it pauses
 instead (run flag 0, mode 0). The mode-0 divisor passes through extra clamp logic
-(`0x00546DFA`..`0x00546E36`, a floor derived from the global `[0x0066DE7C]`, not
-fully decoded) before landing in `+0x8D4`; a change of mode resets the pacer's
-last-advance timestamp (`operations+0x938`).
+(`0x00546DFA`..`0x00546E28`, a floor derived from the global `[0x0066DE7C]`, not
+fully decoded) before `0x00546E2E`/`0x00546E31` land it in `+0x8D4`; a change of
+mode resets the pacer's last-advance timestamp (`operations+0x938`).
 
 Known enqueuers: the fast-forward button (`0x00420300`, mode 1) and its
 counterpart (`0x004202A0`, mode 0), both leaving the divisors at `-1`; the speed

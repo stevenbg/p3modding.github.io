@@ -1,13 +1,17 @@
 # Bands and Hideouts
 The ships container holds up to five **band** objects, pointers at `0x006DD7AC`
-(container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them, where `n`
-is the **Pirates activity** setting: the byte at `[[0x006CC3E8] + 0x13]`, holding **0 for
-low, 1 for normal and 2 for high** (see [Game Settings](../reference/game-settings.md)) - the Game settings steppers are 1-based on screen and
-stored one lower (`0x0049935B` copies it from `[window+0x1B90]`). That gives one, three or
-five bands, and five is why the game reserves exactly five band slots. "Difficulty" is
-only a preset over the individual settings: `0x00463B20` writes one value into all of
-them. Every other reader of this byte is pirate code, so it governs nothing else.
-Each is a 24-byte heap object (`new` at `0x0064F7B9`, constructor `0x00513720`, seeded by
+(container `+0x0C`). World generation (`0x0054A480`) creates `2 * n + 1` of them
+(`lea ebx,[edx+edx*1+0x1]` at `0x0054A4F8`), where `n` is the **Pirates activity** setting:
+the byte at `[[0x006CC3E8] + 0x13]`, holding **0 for low, 1 for normal and 2 for high**. The
+[Game settings](../reference/game-settings.md) steppers are 1-based on screen and stored one
+lower (`0x0049935B` copies it from `[window+0x1B90]`). That gives one, three or five bands,
+and five is why the game reserves exactly five band slots.
+
+"Difficulty" is only a preset over the individual settings, and this is one of the seven bytes
+it moves; where the presets are expanded into them has not been found. Every reader of the
+byte other than the settings screen is pirate code, so it governs nothing else.
+
+Each band is a 24-byte heap object (`new` at `0x0064F7B9`, constructor `0x00513720`, seeded by
 `0x00513D80`):
 
 |Offset|Meaning|

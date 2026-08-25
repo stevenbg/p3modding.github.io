@@ -158,7 +158,7 @@ The following fields have been identified:
 000003CC field_3CC dd ?
 000003D0 field_3D0_wares_copy dd 24 dup(?)
 00000430 field_430_unknown_wares_data dd 24 dup(?)
-00000490 field_490_daily_production dd 24 dup(?) ; NOMINAL capacity in raw units/day: the accumulation at 0x0050EB4A omits the employees term that the actual figure at +0xC4 includes, so staffing is ignored entirely (verified down to 0% utilization). Covers EVERY facility in the town, merchant-owned ones included - measured via bricks, where +0x490 minus +0xC4 equals the merchants' nominal capacity. t2 = t1 + 10 days of this. See Towns > Production
+00000490 field_490_production_values dd 24 dup(?) ; NOMINAL capacity in raw units/day - p3-api's TownPtr::get_production_values, not to be confused with storage's field_C4_daily_production, which is the ACTUAL staffing-scaled figure: the accumulation at 0x0050EB4A omits the employees term that the actual figure at +0xC4 includes, so staffing is ignored entirely (verified down to 0% utilization). Covers EVERY facility in the town, merchant-owned ones included - measured via bricks, where +0x490 minus +0xC4 equals the merchants' nominal capacity. t2 = t1 + 10 days of this. See Towns > Production
 000004F0 field_4F0_consumption_data consumption_data 24 dup(?)
 00000670 field_670 dd ?
 00000674 field_674 dd ?

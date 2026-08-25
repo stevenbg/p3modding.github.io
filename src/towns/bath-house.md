@@ -49,13 +49,13 @@ def calculate_expected_bribe(rank: int, rand: int, already_bribed: bool):
     return price
 
 def calculate_bribe_result(amount: int, rank: int, rand: int, already_bribed: bool):
-    price = calculcate_expected_bribe(rank, rand, already_bribed)
+    price = calculate_expected_bribe(rank, rand, already_bribed)
     if amount < price:
-        return BribeResult.OK
+        return BribeResult.FAILED
     elif amount >= price * 1.5:
         return BribeResult.GOOD
     else:
-        return BribeResult.FAILED
+        return BribeResult.OK
 ```
 
 For unbribed councillors, this produces the following minimum and maximum bribes:
@@ -70,6 +70,9 @@ For unbribed councillors, this produces the following minimum and maximum bribes
 |Patrician|22000|27000|
 |Mayor|28000|33000|
 |Alderman|38000|43000|
+
+The comparison is at `0x005B25C3` (`cmp ebx,edi` on price against the offered amount,
+`ja` to the failure path), and the `1.5` is the double at `[0x0066F490]`.
 
 ### Result
 The result can be identified by the councillor's response:

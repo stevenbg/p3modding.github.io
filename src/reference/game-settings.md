@@ -6,8 +6,9 @@ each be set on their own.
 
 The block is initialised wholesale by the run of stores from `0x00463AEE` to `0x00463B89`.
 It writes `bl` into the dword at `+0x4` and into the bytes `+0x9`, `+0xD`, `+0xE`, `+0xF`,
-`+0x10`..`+0x16`, `+0x18` and `+0x19`, and forces `+0xA`, `+0xC` and `+0x17` to `1`. `+0xB`
-is the one byte in that span it never touches. That is a reset to defaults, **not** the code
+`+0x10`..`+0x16`, `+0x18` and `+0x19`, forces `+0xA`, `+0xC` and `+0x17` to `1`, and takes
+`+0xB` from the global `[0x0066E920]` = `12` (`0x00463AFC`) - the one byte in that span that
+comes from anywhere but a register or a literal. That is a reset to defaults, **not** the code
 that applies a difficulty preset - it would leave every setting holding the same value, which
 is not what the presets produce.
 

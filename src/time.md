@@ -64,7 +64,7 @@ This results in the following town tick behaviour:
 All facilities tick when their town ticks.
 
 ## Game Speed
-The tick pacer inside `execute_operations` (`0x00546640`) converts real
+The tick pacer `execute_operations` calls (`0x00546620`) converts real
 milliseconds into [Advance Time operations](./operations/00c4-advance-time.md)
 once per frame. How many ticks a batch gets depends on the pacing *mode*
 (`operations+0x92C`) and its ms-per-tick divisor:

@@ -46,7 +46,8 @@ ship's `field_120`, so `field_120` is the ship's total artillery power. Removing
 weapon subtracts both. That total is one of the two halves of the fighting strength the
 pirate AI compares before attacking; the other is the crew count in `field_40`.
 
-Two further six-byte tables sit in the same block and are not yet identified:
+Two further six-byte tables sit in the same block; they are the volley damage components,
+see [Projectiles](../ships/sea-battles/projectiles.md#raw-damage):
 `0x00672CC0` = 32, 32, 77, 77, 96, 58 and `0x00672CD0` = 60, 80, 60, 80, 90, 90.
 
 ## Ship Artillery Slots

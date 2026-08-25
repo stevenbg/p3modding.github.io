@@ -7,7 +7,7 @@
 This patch modifies P3 to render all ships on the scrollmap, not just the up to two ships spotted by each player ship or convoy.
 
 ## Details
-The first half of the `draw_spotted_ships` function at `004516B0` determines which ships should be rendered.
+The first half of the `draw_spotted_ships` function at `0x004516B0` determines which ships should be rendered.
 It produces three things of interest:
 - the amount of ships that should be drawn
 - an array of ship indexes that should be drawn

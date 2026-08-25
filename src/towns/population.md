@@ -75,10 +75,11 @@ beggar path is skipped and no one is taken on from the street.
 So a town with a large beggar pool fills new buildings faster, and a town with none cannot
 staff them however many posts it has.
 
-When the beggars run out, the routine falls back to **poaching**: it walks the other twenty
-facility slots and drains their `field_A` pools into this facility (`0x00510953` onward),
-zeroing each as it takes it. That moves workers between facilities without changing the
-population at all.
+When the beggars run out, the routine falls back to **poaching**: from `0x00510953` it walks
+facility slots `1`..`20` - Militia is never drawn from, whichever facility is hiring - and
+takes from their `field_A` pools until the vacancies are filled, zeroing a pool only when it
+drains one completely. That moves workers between facilities without changing the population
+at all.
 
 Note that the job count matching the population is `field_4_employees + field_A`, and
 [`field_A`](../reference/facilities.md) is the pool of posts a facility is entitled to but
@@ -137,9 +138,12 @@ and 7 a day out. Three modifiers apply to the increase:
 - if the town has **no militia** (`facility[0].employees == 0`) an increase is floored so the
   result is at least **24**. With a militia there is no floor.
 
-Separately, if `town_flags & 0x800000` is set the flag is **cleared** and beggars jump at once
-by `sqrt(total)/6 + target/2`, capped so they stay below a quarter of the population - a
-one-shot influx some event triggers.
+Separately, if `town_flags & 0x800000` is set **and bit `0x8` is clear** - the routine tests
+both at once, `and edx,0x800008 / cmp edx,0x800000` at `0x0051C22A` - the flag is **cleared**
+and beggars jump at once by `sqrt(total)/6 + target/2`. That jump is capped to keep beggars
+below a quarter of the population, but **only when the town already holds more than 50**
+(`cmp ecx,0x32 / jle` at `0x0051C25B`); below that the influx is unbounded. A one-shot some
+event triggers.
 
 ### What Moves People Into and Out of Beggary
 Beggars are the town's intake: every new citizen arrives as a beggar first and is converted by
@@ -152,7 +156,7 @@ constant.
 |a facility hires (`0x005108E0`)|**4 beggars per worker** become 4 **poor** citizens; needs `satisfaction[poor] > 0`|
 |a facility loses workers (`0x0050E380`)|**4 people per lost job** are moved out of rich/wealthy/poor and **into** beggary|
 |[form a militia squad](../operations.md) (op `0x41`, `0x0051D4C0`)|militia employees **+5**, beggars **-20**, poor **+20**|
-|disband a militia squad (op `0x40`, `0x0051D410`)|beggars **+20**, poor **-20**|
+|disband a militia squad (op `0x40`, `0x0051D410`)|militia employees **-5**, beggars **+20**, and 20 taken from the classes **poor first, then wealthy, then rich**, each floored at 1 and the shortfall carried upward (`0x0051D47E`). Needs the militia to hold at least 5|
 |[hire sailors](../operations.md) (op `0x04`, `0x00537C20`)|beggars **-N** and total citizens **-N**, one beggar per sailor; if the town has fewer beggars than requested it takes all of them and the pool goes to `0`|
 |pay off a ship's crew (op `0x05`, `0x00537DD0`)|the ship's `field_40_crew` is added to beggars and to the total, and the ship's crew is set to `0`|
 

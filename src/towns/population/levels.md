@@ -52,7 +52,12 @@ class Town:
             * (self.satisfactions[level] + 40)
             // self.get_divisor(level)
         )
-        target = min(max(target, 1), self.dwellings_capacity[level])
+        # The capacity clamp has a floor of its own: 0x0051C6EA takes max(capacity, 10)
+        # rather than the capacity itself.
+        if self.dwellings_capacity[level] < target:
+            target = max(self.dwellings_capacity[level], 10)
+        else:
+            target = max(target, 1)
         LOGGER.debug(f"{level} target: {target} stock: {self.citizens[level]}")
         if target < self.citizens[level]:
             # Current stock exceeds target

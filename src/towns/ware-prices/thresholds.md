@@ -122,6 +122,7 @@ fn update_town_price_thresholds(town) {
     thresholds[WareId::Bricks][1] += 160000 * building_material_factor;
     thresholds[WareId::Pitch][1] += 3600;
     thresholds[WareId::Hemp][0] += 5000 * building_material_factor;
+    thresholds[WareId::Hemp][1] += 10000 * building_material_factor;
     thresholds[WareId::IronGoods][0] += 2000 * building_material_factor;
     thresholds[WareId::IronGoods][1] += 4000 * building_material_factor;
 
@@ -133,27 +134,32 @@ fn update_town_price_thresholds(town) {
     }
     */
 
-    // Set t2 and t3 except for bricks and weapons: t2 adds ten days of the town's
-    // production array (town+0x490, raw units/day; verified in-game across several
-    // towns via t2 - t1). See Towns > Production for how that array is filled and how
-    // it differs from the actual output the market hall shows.
-    // The array holds NOMINAL production at full utilization:
-    // it is nonzero exactly for the wares the town produces and ignores facility
-    // staffing completely, while the market hall window shows the actual
-    // staffing-scaled output (verified: dropping a sawmill to 50% and then 0%
-    // utilization halved and then zeroed the window's number; the array never
-    // moved). Thresholds therefore anchor to what the town COULD produce, not to
-    // what it currently does - with a tradeable consequence: building production
-    // facilities and leaving them unstaffed still deepens t2 (and t3), stretching
-    // the price curve's oversupply segment, so the town tolerates much larger
-    // stockpiles of that ware before its prices collapse toward the floor. Every
-    // merchant's facilities count, AI-owned included.
-    for i in 0..19 {
-        thresholds[i][2] = thresholds[i][1] + 10 * town.daily_production[i];
+    // Two different arrays are in play from here on, named as p3-api names them:
+    //   production_values  = town+0x490, NOMINAL capacity at full staffing, covering
+    //                        every facility in the town, merchant-owned included
+    //   daily_production   = town+0xC4,  ACTUAL staffing-scaled output of the town's
+    //                        own facilities, zeroed each tick
+    // See Towns > Production for how each is filled.
+    //
+    // Set t2 and t3 for wares 0x00..=0x13. The four weapons were handled by their own
+    // loop above; bricks ARE included here and are then overridden below. t2 adds ten
+    // days of the nominal array - verified in-game across several towns via t2 - t1,
+    // and verified to ignore staffing: dropping a sawmill to 50% and then 0%
+    // utilization halved and then zeroed the market hall's number while the array
+    // never moved. Thresholds therefore anchor to what the town COULD produce, not to
+    // what it currently does, which is tradeable: building production facilities and
+    // leaving them unstaffed still deepens t2 and t3, stretching the price curve's
+    // oversupply segment, so the town tolerates much larger stockpiles before its
+    // prices collapse toward the floor. Every merchant's facilities count, AI-owned
+    // included.
+    for i in 0..20 {
+        thresholds[i][2] = thresholds[i][1] + 10 * town.production_values[i];
         thresholds[i][3] = thresholds[i][2] + thresholds[i][0];
     }
 
-    // Pitch and bricks production bonus
+    // Pitch and bricks production bonus. Note these two guards read the ACTUAL array,
+    // not the nominal one the loop above used: an unstaffed brickworks deepens t2 but
+    // does not earn this t3 bonus.
     if town.daily_production[WareId::Pitch] > 0 {
         thresholds[WareId::Pitch][3] += 3600;
     }
@@ -169,10 +175,12 @@ fn update_town_price_thresholds(town) {
 
     // Bricks t2 and t3
     if has_effective_bricks_production {
-        thresholds[WareId::Bricks][2] = thresholds[WareId::Bricks][1] + town.daily_production[WareId::Bricks];
-        thresholds[WareId::Bricks][3] = thresholds[WareId::Bricks][1] + 2 * town.daily_production[WareId::Bricks];
+        thresholds[WareId::Bricks][2] = thresholds[WareId::Bricks][1] + town.production_values[WareId::Bricks];
+        thresholds[WareId::Bricks][3] = thresholds[WareId::Bricks][1] + 2 * town.production_values[WareId::Bricks];
     } else if thresholds[WareId::Bricks][2] > 2 * thresholds[WareId::Bricks][1] {
-        // TODO: can this every be true?
+        // Reachable: the loop above gave bricks t2 = t1 + 10 * production, so this
+        // holds once nominal brick capacity exceeds t1 / 10 - about 16000 raw units
+        // at building_material_factor 1, or four and a half fully staffed brickworks.
         thresholds[WareId::Bricks][2] = 2 * thresholds[WareId::Bricks][1];
         thresholds[WareId::Bricks][3] = 3 * thresholds[WareId::Bricks][1];
     }

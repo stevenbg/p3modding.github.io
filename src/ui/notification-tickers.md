@@ -9,12 +9,14 @@ queues on one manager object, held in the static `0x006CBB40`.
 |`+0x488`|left-queue count (byte, capacity 5; enqueue bails when full)|
 |`+0x494`|right-queue slots, stride `0xA0`|
 |`+0x7B4`|right-queue count (byte, capacity 5)|
-|`+0x7D0`|left-queue expiry ticks, one u32 per slot: enqueue tick + `0x2EE0`|
+|`+0x7D0`|left-queue expiry, one u32 per slot: the frame clock at enqueue + `0x2EE0` = 12000 ms|
 
 ## Posting
 - Left/event popup: `0x0042B6A0` (thiscall(this, text)) - takes a **plain C
   string** and does everything: picks the slot, sets the text, stamps the expiry
-  (12000 ticks from `[0x006DCCF0]`, the tick counter). Anything can post one.
+  (`0x0042B752`: `[0x006DCCF0] + 12000`). That global is the **frame clock in
+  milliseconds**, not the game tick counter - see [Time](../time.md#the-frame-clock) - so a
+  popup lives 12 seconds of real time regardless of game speed. Anything can post one.
 - Right/letter popup: `0x0042BB20` (thiscall(this, string)), followed by a
   `0x004237D0` refresh - what the letter announcer uses.
 

@@ -36,6 +36,7 @@ Every ware has a scaling factor, through which the game divides the actual value
 Wares with a barrel icon have a scaling factor of `200`, Wares with a bundle icon have a scaling factor of `2000`.
 
 A table that maps every barrel `WareId` to `1` and every bundle `WareId` to `0` can be found at `0x00672C14`.
+Its last four entries, the militia weapons, all read `1`, but that does not mean 200 - the weapons do not use this table's rule.
 The scaling of militia weapons can be inferred by transferring one piece and observing the value changes in memory.
 This reveals the following factors:
 ```rust

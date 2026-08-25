@@ -32,7 +32,7 @@ a day, so both arrays hold a day's worth.
 |`town + 0x0C4`|**actual** output of the town's own facilities, scaled by staffing|
 |`town + 0x490`|**nominal** capacity at full staffing, of *every* facility in the town including merchant-owned ones|
 
-They are written 30 bytes apart in the same routine and differ in exactly one term:
+They are written 19 bytes apart in the same routine and differ in exactly one term:
 `0x0050EB4A` accumulates `efficiency * full_workforce` into `+0x490`, while `0x0050EB5D`
 accumulates `employees * efficiency` into `+0xC4` (as a read-modify-write pair with the stock
 at `+0x4`, `0x0050EBC1`). `full_workforce` is the facility type's entry in the
@@ -284,8 +284,10 @@ bit 0x40000              -> calls 0x005462F0(4); unidentified
 Bit `n` therefore means facility type `n + 4`, the first ware producer being HuntingLodge at
 `0x04`, and the walk is literally 17 iterations of stride `0x10` from `town + 0x888` with a
 mask that doubles each pass, the four municipal slots having been written just before at
-`0x005458EF`. The two bits past the end of that range are not facilities: `0x20000` is
-[whaling](#whale-oil-has-no-facility) and `0x40000` is something else again. Both bitmaps
+`0x005458EF`. Four bits past the end of that range are not facilities: `0x20000` is
+[whaling](#whale-oil-has-no-facility), and `0x40000`, `0x80000` and `0x100000` each call
+`0x005462F0` with a different small integer - `4`, `0x10` and `0xD` - at `0x00545997`,
+`0x005459B0` and `0x005459C9`. What that routine does with them is unidentified. Both bitmaps
 arrive in a 16-byte town record - effective at `+0x4`, ineffective at
 `+0x8`, town index at `+0xE` - handed to the create-a-town routine `0x00531D50`, which also
 grows the towns array, runs per-town setup `0x00545CB0` and spawns the town's
@@ -324,16 +326,33 @@ its first 16 bytes mirror a town facility:
 |Offset|Meaning|
 |-|-|
 |`+0x0`|u32 efficiency|
-|`+0x4`|u16 workers currently employed, never above `+0xA`|
+|`+0x4`|u16 workers currently employed, never above `+0xC`|
 |`+0x6`|u8 facility type, only ever `0x04`..`0x14` - a merchant cannot own the four municipal types|
 |`+0x7`|u8 town index|
 |`+0x8`|u16 next record in the office's chain|
-|`+0xA`|u16 total worker capacity|
-|`+0xC`|u16 summed alongside the employees by the walk at `0x004DE668`; equal to `+0xA` in 183 of 185 measured records|
+|`+0xA`|u16 worker capacity, from a counter that is normally a copy of `+0xC`'s|
+|`+0xC`|u16 **total worker capacity** - the field the building count comes from; also summed alongside the employees by the walk at `0x004DE668`|
+|`+0xE`|u16 worker capacity from a third counter over the same sites|
 
-`+0xA` is the per-building worker capacity times the number of buildings. That capacity is
-**30 for most types and 15 for Brickworks and Pitchmaker**, so the building count is
-`+0xA / capacity` - observed totals are 15, 30, 45, 60, 90, 120, 180, 210 and 300. The 15-worker types are what make the divisor matter: six brickworks give `+0xA` = 90 and the +6% bonus, where dividing by 30 would wrongly read three buildings and +3%.
+All three are the per-building worker capacity times a count, and that capacity is **30 for
+most types and 15 for Brickworks and Pitchmaker**. Observed `+0xC` totals are 15, 30, 45, 60,
+90, 120, 180, 210 and 300. The 15-worker types are what make the divisor matter: six
+brickworks give `+0xC` = 90 and the +6% bonus, where dividing by 30 would wrongly read three
+buildings and +3%.
+
+**The count is `+0xC / capacity`.** One loop fills all three counters - `0x004FFD40`, called
+per office from the town tick at `0x0051BBBA`, walking the town's
+[construction site](./construction.md) array - and `0x004D49D0` multiplies each by the
+capacity into `+0xE`, `+0xC` and `+0xA` respectively. `+0xC`'s counter is the one incremented
+alongside the office's own building count at `office + 0x2D2`, and it is the field the record
+constructor writes (`0x004D3553`) and the field `0x004D4420` divides to recover a count.
+
+`+0xA` is almost always equal to it, but not because it is the same quantity: its counter is
+overwritten by a **wholesale copy** of `+0xC`'s for all 17 types (`0x004FFE41`). When one
+condition in that routine holds the copy is skipped and `+0xA` instead counts a subset,
+filtered by the town map byte at `town + 0x80C` against `0x80` - which is why two of 185
+measured records had `+0xA != +0xC`. What selects between the two paths, and what exactly
+separates the three counters, is not pinned down.
 
 ### The Same-Type Bonus
 Efficiency is **not** taken from the `BASE_EFFICIENCY` table that town facilities use. A
@@ -347,15 +366,13 @@ town and `768` when it is not - it **inherits the town's own effective/ineffecti
 |6-8|+6%|1085|814|
 |9 or more|+10%|1126|844|
 
-The result is truncated, so `1024 * 1.03 = 1054.72` becomes `1054` and `1024 * 1.06 = 1085.44` becomes `1085`. Verified on 80 building
-records: every one matched its capacity's implied count. Verified again by counting buildings
-in a town where only one merchant had an office - capacities of 120, 90, 60, 60 and 60
-correctly predicted 4 workshops, 3 cattle farms, 2 sheep farms, 2 fisherman's huts and 2
-sawmills. And verified by construction: completing a sixth brickworks took `+0xA` to 90 and
-the efficiency to 1085.
+The result is truncated, so `1024 * 1.03 = 1054.72` becomes `1054` and
+`1024 * 1.06 = 1085.44` becomes `1085`.
 
-The bonus follows the buildings owned, not the workers employed - a record observed at
-`+0xA` 45 with only 30 of those posts filled still carried the full +3%.
+The bonus follows the buildings owned, not the workers employed: the count comes from
+`+0xC`, which the counting loop fills from the town's site list, and `+0x4` - the employees
+actually working - never enters the calculation. A record with capacity for three buildings
+and only two-thirds of those posts filled still carries the full +3%.
 
 Output follows the same rule as a town facility, `employees * efficiency / k`, and the
 building window shows it weekly in display units. Worked example, checked against the
@@ -511,8 +528,34 @@ staffing-dependent. `0x005101D0` computes a target per facility type and the tai
 `0x00510764` moves the count toward it; a facility at zero employees is skipped entirely
 (except types `0x00` and `0x01`).
 
-At world setup the counts come from a byte table at `0x006729D0`, indexed by type and scaled
-by a **year ramp**: nothing below year 1300, a fixed maximum above 1400, linear in between
-(the year is `[0x006DE4A2]`), divided by 3. Slots still at zero are skipped, so only
-facilities the town actually has get staffed. Militia, Shipyard, Construction and
-Weaponsmith are seeded directly with 10, 10, 5 and 2 at `0x00545CFC` onward.
+At world setup the counts come from a byte table at `0x006729D0`, indexed by type. Per-town
+setup (`0x00545CB0`) makes two passes over types `0x03`..`0x14`:
+
+```
+; pass 1 - 0x00545D4D
+total = 0
+for type in 3..=20:
+    if facility[type].field_8_productivity <= 400:  employees = 0
+    else:                                           employees = 1; total += TABLE[type]
+
+; 0x00545D72 - the year ramp, [0x006DE4A2] is the year
+if   year <  1300: ramp = 0
+elif year >  1400: ramp = 250
+else:              ramp = (year - 1300) * 2.5
+
+share = (250 + ramp) / total
+
+; pass 2 - 0x00545DE8
+for type in 3..=20 where employees != 0:
+    employees = ceil(TABLE[type] * share)
+```
+
+So the table entry is not scaled by the ramp directly - it is a **weight**, and the ramp is a
+town-wide budget divided among the facility types the town actually has. A town with more
+producers therefore starts each of them with proportionally fewer workers, and the budget runs
+from 250 in 1300 to 500 from 1400 on. Slots whose productivity is at or below 400 - which
+means `0`, the town not having that facility - are skipped by both passes.
+
+Militia, Shipyard, Construction and Weaponsmith are seeded directly with 10, 10, 5 and 2 at
+`0x00545CFC` onward, but the Weaponsmith is then overwritten by the two passes like any other
+type, since slot `0x03` is inside their range and its productivity is always `1024`.

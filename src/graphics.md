@@ -17,14 +17,19 @@ The executable does not import `ddraw_Dll.dll` statically. It carries a table of
 
 |Offset|Size|Meaning|
 |-|-|-|
+|`-0x04`|4|pointer to the slot that receives the resolved address|
 |`+0x00`|`0x40`|the export name, NUL terminated (`sgl_DrawBitmapRect`, ...)|
-|`+0x40`|4|pointer to the slot that receives the resolved address|
 
-The stored pointer is four bytes below the slot the code actually calls through,
-so the slot for an entry is `[entry+0x40] + 4`. Every bound function also gets a
-16-byte thunk of the form `jmp DWORD PTR [slot]` in the `0x004BAEC0`-`0x004BBB40`
-block, and that thunk address is what the rest of the executable calls. This is
-how the drawing helpers used elsewhere in this book resolve:
+Note that the slot pointer sits **in front of** the name it belongs to. The resolver
+(`0x004BAD38`) keeps `esi` on the name, passes it to `GetProcAddress`, and stores the result
+through `eax = [esi-4]` (`0x004BAD67`) before stepping `esi` by `0x44`. So an entry's own
+`+0x40` dword is the *next* entry's slot pointer, and reading it as this entry's - even with
+the `+4` the mostly-descending pointer run seems to invite - mis-attributes any entry where
+that run is not monotonic. `sgl_SetTextMode` and `sgl_SetYAxis` are such a pair.
+
+Every bound function also gets a thunk of the form `jmp DWORD PTR [slot]`, usually 16 bytes
+apart, in the `0x004BAEC0`-`0x004BBB40` block, and that thunk address is what the rest of the
+executable calls. This is how the drawing helpers used elsewhere in this book resolve:
 
 |Thunk|Export|
 |-|-|

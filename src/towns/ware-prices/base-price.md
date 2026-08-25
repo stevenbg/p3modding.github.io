@@ -7,7 +7,7 @@ The `ware_base_prices` table at `0x00673A18` defines the following *base prices*
 |Meat|0.47855002|957.1|
 |Fish|0.22005001|440.1|
 |Beer|0.17399999|34.8|
-|Salt|0.1425|28.45|
+|Salt|0.1425|28.5|
 |Honey|0.55000001|110.0|
 |Spices|1.4|280.0|
 |Wine|1.1|220.0|
@@ -23,3 +23,13 @@ The `ware_base_prices` table at `0x00673A18` defines the following *base prices*
 |Hemp|0.22000001|440.0|
 |Pottery|0.85499996|171.0|
 |Bricks|0.039900005|79.8|
+
+The table has four more entries, the militia weapons, and they are whole numbers rather than
+the fractional per-unit prices the wares use:
+
+|Ware|Base Price|
+|-|-|
+|Sword|10.0|
+|Bow|8.0|
+|Crossbow|12.0|
+|Carbine|14.0|

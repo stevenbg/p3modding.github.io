@@ -37,7 +37,7 @@ the **merchant count** at `0x006DE4AA`, where the letter pool size at `0x006DD73
 meant:
 
 ```
-0053C6ED  and  eax, 0xffff          ; letter index that 0x004D7900 found
+0053C6EF  and  eax, 0xffff          ; letter index that 0x004D7900 found
 0053C6F4  mov  cx, [0x006DE4AA]     ; merchant count  (should be [0x006DD736])
 0053C6FB  cmp  ecx, eax
 0053C6FD  jbe  0x0053C80A           ; bail when index >= merchant count

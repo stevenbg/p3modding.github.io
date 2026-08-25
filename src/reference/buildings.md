@@ -33,7 +33,7 @@ pub enum NewBuildingId {
 }
 ```
 
-At `0x672fbf` is a table that maps building ids to new building ids:
+At `0x00672FC0` is a table that maps building ids to new building ids:
 
 |BuildingId|NewBuildingId|
 |-|-|

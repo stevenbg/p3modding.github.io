@@ -62,12 +62,13 @@ town information window's two produced-ware lists walk (`0x005B7DAA` for the eff
 09 0a 05 06 0d 08 00 10 0c 04 ff 0b 07 0a 0f 13 0e 14 11 12 03 03 03 03
 ```
 
-Three entries are not a plain inverse:
+Six entries are not a plain inverse:
 
 |Ware|Entry|Why|
 |-|-|-|
 |Spices|`0x00` Militia|nothing produces spices; every reader skips types `<= 3`|
 |Leather|`0x0a` FarmCattle|shared with meat - the cattle farm's second output|
+|Bow, Crossbow, Carbine|`0x03` Weaponsmith|shared with Sword, which is the type's `PRIMARY_WARE` entry; the smithy makes one armament a day, chosen at runtime - see [Weapons Are Not Like the Rest](../towns/production.md#weapons-are-not-like-the-rest)|
 |**WhaleOil**|**`0xFF`**|**no facility at all** - see [Production](../towns/production.md#whale-oil-has-no-facility)|
 
 Whale oil is the only ware carrying the `0xFF` sentinel, and the only one whose productivity
@@ -108,7 +109,7 @@ routine per type, each with its own hardcoded wares and scale factors:
 |Militia|`0x00510234`|`0x00510C50`|Sawmill|`0x005104D5`|`0x0050ECD0`|
 |Shipyard|`0x0051025A`||WeavingMill|`0x00510515`|`0x0050EEB0`|
 |Construction|`0x0051029F`||Saltworks|`0x00510555`|`0x0050EF50`|
-|Weaponsmith|`0x005102C2`|`0x00510AA0`|IronSmelter|`0x0051059A`|`0x0050F650`|
+|Weaponsmith|`0x005102C2`|`0x0050F6E0`|IronSmelter|`0x0051059A`|`0x0050F650`|
 |HuntingLodge|`0x005102EC`|`0x0050ED70`|FarmSheep|`0x005105DA`|`0x0050F060`|
 |FishermansHut|`0x0051032C`|`0x0050E690`|Vineyard|`0x0051061A`|`0x0050F100`|
 |Brewery|`0x00510381`|`0x0050E8B0`|Pottery|`0x0051065A`|`0x0050F220`|

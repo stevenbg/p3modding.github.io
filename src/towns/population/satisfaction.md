@@ -17,7 +17,7 @@ The function `prepare_citizens_menu_ui` at `0x0040B570` calculates the satisfact
 |29.5|Very Happy|
 |19.5|Happy|
 |9.5|Very Satisfied|
-|0.5|Satisfied|
+|-0.5|Satisfied|
 |-10.5|Dissatisfied|
 |-Infinity|Annoyed|
 
@@ -80,15 +80,26 @@ At `0x00672938` there is a table that defines *ware satisfaction weights* for ev
 |Crossbow|0|0|0|
 |Carbine|0|0|0|
 
+The reference quantity is the ware's **t0 [price threshold](../ware-prices/thresholds.md)**
+(`town + 0x4F0 + ware*0x10`, read at `0x0051CAF5`), not a consumption figure. t0 is normally
+seven days of consumption, which is why it behaves like one - but it is fourteen days under
+siege, fire, famine or plague, it carries the building-material bonuses that make timber and
+bricks far larger, and it is floored at 1000 or 10000. A ware is skipped entirely unless
+`town + 0x310 + ware*4` (the citizens' consumption) is positive (`0x0051CAE4`).
+
 The current satisfaction is calculated as follows:
 ```
 def get_ware_satisfaction(ware_id, population_type):
-    if wares[ware_id] >= 2 * weekly_consumption[ware_id]:
+    if citizen_consumption[ware_id] <= 0:
+        return 0                      # 0x0051CAE4
+    t0 = thresholds[ware_id][0]
+    if wares[ware_id] >= 2 * t0:
         return satisfaction_weights[population_type][ware_id]
     else:
-        return (wares[ware_id] - weekly_consumption[ware_id])
+        # truncated toward zero, so the negative branch rounds up, not down
+        return trunc((wares[ware_id] - t0)
             * satisfaction_weights[population_type][ware_id]
-            // weekly_consumption[ware_id]
+            / t0)
 
 current_satisfaction = 2 * (
     base_satisfaction

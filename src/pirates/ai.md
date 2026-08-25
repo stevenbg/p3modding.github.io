@@ -41,7 +41,8 @@ Because the current prey is sticky, a pirate will shadow one ship for days while
 one sails past untouched.
 
 Three rectangles in `.rdata` are excluded outright - the map's three rivers. The test is
-`0x0050E340`, and the boxes are read from `0x00673564` as x0, x1, y0, y1:
+`0x0050E340`, and the boxes start at `0x00673564`, 8 bytes each as four u16 in the order
+x0, y0, x1, y1 - listed here column-wise:
 
 |x0|x1|y0|y1|
 |-|-|-|-|

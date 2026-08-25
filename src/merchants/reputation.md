@@ -3,7 +3,7 @@ The function `update_merchant_reputation_and_value` at `0x004F7BB0` calculates t
 
 Reputation is calculated as follows:
 ```
-reputation = min(0,
+reputation = max(0,
     outrigger_rep
     + tenants_rep
     + employment_rep

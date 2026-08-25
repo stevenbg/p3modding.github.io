@@ -18,7 +18,7 @@ The text depends on the crime type:
 |9|*Several witnesses to a recent pirate attack, have sworn that they recognised your ship, %s with a pirate flag run up the mast and firing on Hanseatic League ships.*|
 |10|*Several witnesses to a recent pirate attack, have sworn that they recognised your ship %s with a pirate flag run up the mast and plundering Hanseatic League ships.*|
 |11|*Several witnesses to a recent pirate attack, have sworn that they recognised your ship %s with a pirate flag run up the mast and sinking Hanseatic League ships.*|
-|12|*Several witnesses to a recent pirate attack, have sworn that they recognised your ship %s with a pirate flag run up the mast and capturing Hanseatic Leagueague ships.*|
+|12|*Several witnesses to a recent pirate attack, have sworn that they recognised your ship %s with a pirate flag run up the mast and capturing Hanseatic League ships.*|
 |13|*Several witnesses to a recent pirate attack on %s have sworn that they recognised your ship %s displaying a pirate flag run up the mast.*|
 |14|*Several witnesses to a recent pirate attack on %s have sworn that they recognised your ship %s displaying a pirate flag run up the mast and firing on the town's defences.*|
 |15|*Several witnesses to a recent pirate attack on %s have sworn that they recognised your ship %s displaying a pirate flag run up the mast, breaching the town's defences and plundering the town's coffers.*|

@@ -19,8 +19,8 @@ Each row embeds a [number widget](../ui.md#number-widgets): the displayed amount
 at `row + 0x188` and is written through the setter `0x0045C930`.
 
 The amounts are populated only by the window's open method (`0x005D8950`,
-vtable `+0x120`): its 20-ware loop at `0x005D8F40` reads the office stock
-(`office + 0x354`), divides by the ware scaling (barrels 200, bundles 2000, via the
+vtable `+0x120`): its 20-ware loop at `0x005D8F40` reads the administrator's minimum store
+quantity (`office + 0x354`, the field [operation `0x5B`](../operations/005b-office-autotrade-setting-change.md) writes), divides by the ware scaling (barrels 200, bundles 2000, via the
 scaling table at `0x00672C14`), clamps to 9999 and calls the widget setter. This is
 why administrator amounts historically refreshed only when the window was reopened;
 a mod can refresh them in place by re-running the same computation against the row

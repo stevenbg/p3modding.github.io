@@ -15,7 +15,7 @@ at `0x00547290`, and `0xC4`'s inline handler at `0x00546A1C` calls
 `advance_time(game_world, from, to)` directly.
 
 The operations are produced by the tick pacer inside `execute_operations`
-(`0x00546640`): once per frame it converts the real milliseconds elapsed since the
+(`0x00546620`): once per frame it converts the real milliseconds elapsed since the
 last advance into a tick count according to the current
 [game speed](../time.md#game-speed), and enqueues one `0xC4` for the batch.
 The same pacer enqueues the autosave operation (`0xC2`) whenever the autosave timer
