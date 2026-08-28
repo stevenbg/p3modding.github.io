@@ -109,16 +109,54 @@ local_social_rep += effective_amount
 ```
 
 ### Feeding the Poor
-The `handle_feeding_the_poor` function is at `0x004FE557`.
-Food donations influence the local social reputation as follows:
+The `handle_feeding_the_poor` function is at `0x004FE557` - a method on the town's church
+object at `town + 0x794`, reached by operation `0x30` (built by the donation dialog at
+`0x005CB0C0`, dispatched inline at `0x00535CF0`). The operation carries the merchant, the
+town, a **gate byte**, and the five donation amounts as `u16`, in the order of the
+donatable-goods table at `0x006734CC`: grain, beer, fish, meat, wine.
+
+The handler converts each amount to raw units (x2000 for a load ware, x200 for a barrel
+ware, by the scale table at `0x00672C14`), takes `min(requested, office stock)` out of the
+office - rounding a stock-limited row **down to whole displayed units**, so the fractional
+part of the warehouse's last unit is never donatable - and credits the reputation from the
+market value of what was actually delivered:
+
 ```
-for amount, ware_id in donation:
+for amount, ware_id in delivered:
     local_social_rep += get_sell_price(ware_id, town_index, amount)
         * 0.0003
         / (church_factor + 1)
         * base_rep_factor
 ```
-TODO: minimum wares threshold?
+
+**The gate byte decides the reply and the side effect.** The dialog computes it as the
+donation's market value (each row priced with
+[get_sell_price](../towns/ware-prices/selling-price.md) at `0x0052E1D0`) divided by the
+town's beggar target:
+
+```
+divisor = trunc(sqrt(citizens * poor_satisfaction / 18)) + 8
+gate    = min(total_value / divisor, 255)
+```
+
+A non-positive product never reaches `fsqrt` (`0x0063AB05` branches away on the sign bit),
+so the term contributes nothing and the divisor floors at 8 - a town with unhappy poor is
+the **cheapest** to impress, and the threshold scales up with a town's size and
+contentment. The three bands, confirmed in game to the single barrel:
+
+|gate|reply|effect|
+|-|-|-|
+|`< 10`|"...will be grateful to you for your donations."|reputation only|
+|`10..49`|"...thank you very much for the generous donation..."|reputation only|
+|`>= 50`|"An extremely generous donation! Beggars from everywhere will come to the town..."|reputation, plus bit `0x800000` of the town flags at `0x004FE85A` - the one-shot **beggar influx** trigger, which the beggar code clears when it acts on it (see [Beggars](../towns/population.md#beggars))|
+
+So a large donation always raises the beggar count along with the reputation - the third
+reply says so in as many words. Measured example: Luebeck at 3027 citizens and poor
+satisfaction 10 has divisor 49, and reaches the third band at exactly 53 barrels of beer.
+
+The dialog's wine row is priced as **salt** when this gate is computed - see
+[the bug](../bugs/feeding-the-poor-wine-price.md); the reputation credit is unaffected,
+since the handler prices the delivered goods itself.
 
 ### Town Coffers Access
 

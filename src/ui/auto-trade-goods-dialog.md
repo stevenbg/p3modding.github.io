@@ -63,12 +63,25 @@ Per-ware widget structs follow at stride `0x190`: `+0x8E0` holds the entered amo
 (`-1` encodes Max, substituted with `1_000_000_000` on commit), `+0x2698` a text
 buffer that is `atoi`'d and scaled by the barrel/bundle table at `0x00672C14`.
 
-`populate` (`0x00405A20`, thiscall(this, stop_pool_index, ship_index, flag)) rebuilds
-the whole dialog from the stop record. It is called by the [ship panel](./ship-panel.md)'s Goods button
+`populate` (`0x00405A20`, thiscall(this, stop_pool_index, ship_index, flag), ret 0xC)
+rebuilds the whole dialog from the stop record. It is called by the [ship panel](./ship-panel.md)'s Goods button
 (`0x0048C432`) and by the dialog's own stop-switching arrows, which follow the pool
-chain from `+0xA4` (`0x004075E3` next, `0x0040763A` previous). The displayed texts are
+chain from `+0xA4` (`0x004075E3` next, `0x0040763A` previous) - those three call sites
+are the dialog's only "open" paths. When the dialog is already open, populate first
+calls the close method itself (`cmp [this+0xA4],-1` / `call [vtable+0x118]` at its
+head), so a stop switch is close-then-reopen. The displayed texts are
 sprintf-cached in the object, so in-place writes to the pool record stay invisible
 until populate runs again.
+
+The dialog never enters the [window manager](../ui.md#window-manager)'s window
+stack - it is a child of the ship panel's world, opened and closed purely through
+populate and `+0x118`. The close (`0x004066F0`) fires on every leave path -
+right-click, the X button, ESC, switching to another ship panel, and the settings
+screen closes it before opening (verified live for all of them) - and always resets
+`+0xA4` to `-1`, so that one field is a reliable "is open, and on which stop" test
+at any moment. The session teardown even closes it defensively before destroying
+it. The visibility byte is `+0x48` (written directly by populate and close; the
+window family's show method is not used).
 
 ## Deferred Commit and Undo
 The +/- buttons do not write the stop record directly: they update the widget texts and

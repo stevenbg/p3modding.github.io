@@ -147,8 +147,8 @@ gates whether the definition draws at all.
 
 The scene window ([the local map scene](./ui.md#the-local-map-scene),
 `[0x006E51AC]`) owns the objects that use them: its tile map is at `+0xC310` with
-the row stride at `+0xC314`, holding `WORD` ids that index the object table at
-`+0x3FC`, and the current scroll offset sits at `+0xC650`/`+0xC654`. A sprite
+the row stride at `+0xC314` and the row count at `+0xC318`, holding `WORD` ids that
+index the object table at `+0x3FC`, and the current scroll offset sits at `+0xC650`/`+0xC654`. A sprite
 object carries
 
 |Offset|Meaning|

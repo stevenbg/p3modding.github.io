@@ -166,6 +166,17 @@ Both check out against live saves: a captain with `39/61/125` and `field_8` = 6 
 22, a pirate with `237/251/112` and `field_8` = `0xFB` reads 31, and administrators at
 trade 0, 43, 86, 129 and 215 read 10, 30, 50, 70 and 110.
 
+At creation the two kinds part ways on the caller's kind flag (`0x004FE0D4`) - the
+same branch that gives a **captain** his `field_8 % 11` (`0x004FE0FB`) while a
+**pirate** keeps the raw rolled byte: the initializer computes a pirate's wage inline
+from the freshly rolled skills (`0x004FE104`, the `0x004FE190` formula) but writes a
+captain's wage as 0 (`0x004FE0F5`). The tavern spawn's call site then runs
+`0x004FE190` once more for **pirates only** (`test bl,bl / jne` around `0x00526A87` -
+recomputing a wage that is already right) and leaves captains alone, so a tavern
+captain's `field_C` stays 0 until he is hired. Whatever the tavern window quotes as
+his demand therefore cannot come from `field_C`; where it does come from has not been
+traced.
+
 ### What the Interface Shows Is Not the Record's Wage
 For an administrator the trading office window calls `0x00500F10(office)`, which returns
 the record's wage **plus** `office+0x2D2`, and falls back to `office+0x2D2 + 10` when the

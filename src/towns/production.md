@@ -92,7 +92,7 @@ The clearest demonstration is Brickworks, which has **27 employees in every town
 one**: its output takes exactly two values, 2713 and 3618, tracking its efficiency of 768 or
 1024 in that exact ratio.
 
-### The Crops Scale k By Three Town Flag Bits
+### Winter: The Crops Scale k By A Town Flag Bit
 `k` is not literally hardcoded. Each type's
 [producer routine](../reference/facilities.md#producing-a-ware) folds a small integer factor
 into its divisor, and **four of the twenty-one read that factor from `town + 0x2C8`**:
@@ -114,9 +114,61 @@ The other seventeen producers never read the field - checked over the full exten
 twenty-one routines, so grain, honey, wine and hemp are the complete set. That is exactly the
 four **crops**: the animal farms, the fisherman's hut and every industry are outside it.
 
-Every `k` in the table above is therefore the value with all three bits clear, which is what
-all 24 towns of the measured save had. **What the three bits mean is not yet established** -
-a harvest or seasonal modifier on crops is the obvious candidate and is untested.
+Every `k` in the table above is the value with all three bits clear.
+
+**Bit `0x2` is winter.** The town tick sets it from the calendar, before anything else it
+does (`0x0051BA10`, the month byte being `[0x006DE4A1]`):
+
+```asm
+51ba10  mov  eax, ds:0x6de4a0     ; ah = the month
+51ba1c  cmp  ah, 2
+51ba27  jb   set                  ; month < 2
+51ba29  cmp  ah, 0xA
+51ba2c  ja   set                  ; month > 10
+51ba2e  mov  eax, [town+0x2C8]
+51ba34  and  al, 0xFD             ; months 2..10: clear the bit
+51ba36  jmp  store
+51ba38  set:    mov  eax, [town+0x2C8]
+51ba3e          or   al, 0x02     ; months 0, 1, 11: set it
+51ba47  store:  mov  [town+0x2C8], eax
+```
+
+The month field is zero-based, so the bit is set in months `0`, `1` and `11` -
+**December, January and February** - and clear from March to November. It is recomputed
+every day for every town, so it is uniform across the map and exactly three months long.
+
+What that costs, from the ladders above with the other two bits clear:
+
+|Ware|factor Mar-Nov|factor Dec-Feb|winter output|
+|-|-|-|-|
+|Grain|6|4|**two thirds**|
+|Honey|4|2|**half**|
+|Wine|4|2|**half**|
+|Hemp|6|3|**half**|
+
+Measured across two presses of a probe over all 24 towns, one in month 4 and one in month 0
+of the following year: bit `0x2` clear in all 24 towns on the first and set in all 24 on the
+second, with every one of the 15 grain rows moving by 0.6666-0.6667 and every hemp row by
+0.4994-0.4995. Staffing is irrelevant to the check, since the nominal figure ignores it -
+one town's grain staffing went from 5 to 68 between the presses and its nominal still fell
+by exactly a third.
+
+**No other ware is seasonal.** All 24 wares were watched across the same pair, and only the
+four crops fell. Non-crop wares never decreased in any town; where one rose it rose in a
+minority of towns, by a round amount (skins `959 -> 1158` and `959 -> 1358`, meat `+1000`,
+wool `+1002`, iron goods `+600`), with efficiency unchanged - that is AI merchants finishing
+buildings during the year, since `town + 0x490` counts
+[everyone's capacity](#two-production-arrays-one-term-apart), not the town's alone. Worth knowing when reading any
+measurement of this array in a young game: construction moves it more than the season does.
+
+**Bits `0x2000` and `0x4000` have never been observed set** in any town of any save measured,
+so what they mean is still unknown - only that they would deepen or reverse the winter
+effect if something ever set them.
+
+The season also reaches **prices** by a separate route: `update_town_price_thresholds` reads
+the month at `0x005281F4` and dispatches months 8-11 through a four-entry jump table at
+`0x00528598`, scaling by roughly +15% and +30%. That is demand, not output, and it is
+undocumented here beyond its existence.
 
 ### Facilities That Make Two Wares
 Two types produce a second ware, and the producer gates that second add on a `flag` argument

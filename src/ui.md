@@ -35,6 +35,27 @@ there is none: the scrollmap's
 [ship panel](./ui/ship-panel.md) keeps its instance in `0x006CE6D0`,
 stored by the same mass-constructor at `0x00426700`.
 
+### Lifecycle Across Loads
+All verified live with hooks on the open/close/destructor slots:
+
+- **An in-game load (settings screen -> load game) keeps every UI object alive.**
+  No destructor runs and the same window pointers serve the loaded game - state a
+  window object carries silently survives into the loaded world. Only the menu
+  path recreates the UI: quitting to the main menu runs the teardown around
+  `0x00427F00`, and loading from the menu runs the mass-constructor again.
+- **The teardown destroys windows without closing them** (destructor, flags 3, no
+  `+0x118` call). That is harmless only because a building window cannot be open
+  when the teardown runs: the settings screen - the only route to quit or load -
+  closes building windows and dialogs before it opens (the close is logged before
+  the settings screen is even pushed, on every path: ESC, the X button,
+  right-click, clicking another building, the leave-town button). The goods
+  dialog additionally receives defensive close calls during the teardown itself.
+- A window's constructor does not necessarily initialize its fields: the church
+  window's mode field (`+0x1D30`) has no writer in its constructor, and since the
+  recreated window usually mallocs into the block the old one vacated, the field
+  inherits the previous session's value - the mechanism behind the
+  [church animation crash](./bugs/church-window-animation-crash.md).
+
 ## Window Class Family
 The window classes share their vtable layout. Two slots are load-bearing for modding:
 
@@ -70,9 +91,20 @@ The stack is what runs the game: the main loop is
 `while (0x004B8A40(this = 0x006DA5F0) != -1)` (the loop itself at `0x004B70C0`),
 and each frame that method pumps messages, updates the
 [frame clock](./time.md#the-frame-clock) and calls the TOP window's vtable
-`+0xF4` (update) and `+0x12C` (`0x004B8B0D`). Scenes - scrollmap, town view, sea
-battle - are window objects on the same stack as the building windows and dialogs,
-so "which scene is the player looking at" is a read of the top node.
+`+0xF4` (update) and `+0x12C` (`0x004B8B0D`).
+
+**The stack holds scenes and full-screen menu screens only** - the scrollmap, the
+town view, the main menu, the settings screen and its dialogs. Building windows
+and dialogs never enter it: they are children of the scene, opened and closed
+through their vtable `+0x120`/`+0x118` without the manager seeing them. Verified
+live with entry detours on both transition methods: across thirteen
+open/close cycles of the trading office window the stack depth never moved, and
+push/remove fired only on scene swaps (entering and leaving a town exchanges the
+town-view and scrollmap windows) and menu screens. "Which scene is the player
+looking at" is therefore a read of the top node. The game also calls the remove
+method defensively on windows that are not on the stack - the session init runs a
+whole batch of such no-op removes - so a remove is not proof the window was ever
+pushed.
 
 ## The Local Map Scene
 One window object serves both the town view and the sea battle - what differs is
@@ -97,6 +129,57 @@ towns attacked from the sea fight on the town's own map. The map files
 (`iso/towns/<id>.*`) come as ids 0..30 (the towns), 128..155, 201..205 (five -
 matching `SeaBattleShaderCnt=5` in `scripts/iso.ini`) and 251..255; which class
 means what has not been pinned down.
+
+## Building Interior Animations
+The animated characters inside building windows - the church's priest, the tavern's
+sailor, captain, informant, pirate, weapons dealer, burglar and traveller - are all
+played by **one shared animation player**: a 0x3C-byte object at `[0x006CC7F4]`,
+created in the session UI init (`0x00426B0C`, constructor `0x0046AFB0`) and destroyed
+with the rest of the UI (`0x00428234`). It holds one animation at a time and streams
+its frames from BMP files under `images/Gebaeude_innen/` (one file per frame, loaded
+lazily one frame per call while the animation plays).
+
+|Field|Meaning|
+|-|-|
+|`+0x4`|the frame-handle array, `malloc(frame_count * 4)` - allocated **only** by switch_animation, `NULL` on a fresh player|
+|`+0x8`|next frame due, against the [frame clock](./time.md#the-frame-clock)|
+|`+0xC + id`|frame count per animation, byte each, from ini keys read via `0x004BE0B0`|
+|`+0x1F`|current frame index|
+|`+0x20`|frames loaded so far (the streaming cursor)|
+|`+0x21 + id`|frame duration per animation|
+|`+0x34`/`+0x36`|draw x/y (u16), set by switch_animation from the window's dimensions|
+|`+0x38`|current animation id, `0xFF` = none (the constructor's value)|
+|`+0x39`|animation count (0x13)|
+|`+0x3A`|playback direction flag (the loops ping-pong)|
+
+|Method|Signature|Role|
+|-|-|-|
+|`0x0046B710`|thiscall(this, id, window), ret 8|switch_animation: frees the old frames, allocates the array, loads frame 0, positions from the window; if `id` is already current it only resets the timer|
+|`0x0046B110`|thiscall(this, id), ret 4|load_next_frame: builds the frame's BMP path and stores the loaded handle at the streaming cursor - **no NULL check on the array**, the crash site of the [church bug](./bugs/church-window-animation-crash.md)|
+|`0x0046B530`|thiscall(this, id, a2, force), ret 0xC|tick: advances the frame on the clock and blits|
+|`0x0046B6A0`|thiscall(this), ret|draw the current frame|
+|`0x0046B0C0`|thiscall(this), ret|teardown: frees frames and array - but leaves `+0x38` stale; the tavern resets it to `0xFF` by hand right after calling it (`0x005CD503`)|
+
+The animation ids, pinned by three independent constraints (the church's
+stage-dependent pair selection, the tavern's per-case ids, and the case/string layout
+order):
+
+|Id|Animation|
+|-|-|
+|0 / 1|sailor start / loop (Matrose)|
+|2 / 3|informant start / loop|
+|4 / 5|pirate start / loop|
+|6 / 7|priest loop / thanks, church without altar (`ohneAltar`)|
+|8 / 9|priest loop / thanks, church with altar (`mitAltar`)|
+|0xA|sailor spits (Matrose_spuckt)|
+|0xB / 0xC|captain start / loop|
+|0xD / 0xE|weapons dealer start / loop|
+|0xF / 0x10|burglar start / loop (Einbrecher)|
+|0x11 / 0x12|traveller start / loop (Reisender)|
+
+Only the church and tavern windows drive the player. A byte at
+`[[0x006CC3E8]+0x24]` gates the animation paths in both (checked by the church tick
+and the player's draw); with it clear, none of this runs.
 
 ## Window Titles
 `0x00420C70` (stdcall, arguments: a string object and the window) draws a window's

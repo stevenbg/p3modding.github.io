@@ -142,8 +142,13 @@ Separately, if `town_flags & 0x800000` is set **and bit `0x8` is clear** - the r
 both at once, `and edx,0x800008 / cmp edx,0x800000` at `0x0051C22A` - the flag is **cleared**
 and beggars jump at once by `sqrt(total)/6 + target/2`. That jump is capped to keep beggars
 below a quarter of the population, but **only when the town already holds more than 50**
-(`cmp ecx,0x32 / jle` at `0x0051C25B`); below that the influx is unbounded. A one-shot some
-event triggers.
+(`cmp ecx,0x32 / jle` at `0x0051C25B`); below that the influx is unbounded.
+
+The one thing that sets the flag is a large donation to
+[feed the poor](../merchants/reputation.md#feeding-the-poor) (`0x004FE85A`, the only writer
+of the bit): a donation whose gate value reaches 50 answers "An extremely generous
+donation! Beggars from everywhere will come to the town in order to profit from your
+donation" - and this influx is that sentence, executed on the town's next tick.
 
 ### What Moves People Into and Out of Beggary
 Beggars are the town's intake: every new citizen arrives as a beggar first and is converted by

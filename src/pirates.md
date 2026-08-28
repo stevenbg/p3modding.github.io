@@ -40,9 +40,6 @@ The two halves of the subject have pages of their own:
 `field_158` and `field_159` are late additions: the ship loader only reads them when the
 savegame version is at least `0x79`, defaulting them to 0 and `0xFF`.
 
-A pirate ship that puts into a town whose `+0x2C8` lacks flag `0x04000000` is removed
-outright (`0x00506DEB`), which is why pirates are only ever seen entering their hideouts.
-
 Capturing a pirate clears `field_15C` and normalises the status, so a prize behaves like
 any other ship - it keeps its name, its index and a now-meaningless band number. It
 arrives stripped: one captured hull came with 8 crew against a complement of 29, 55% hull,

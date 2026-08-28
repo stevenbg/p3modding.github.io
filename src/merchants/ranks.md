@@ -39,5 +39,6 @@ computed by the code in front of `update_merchant_reputation_and_value` (`0x004F
 `merchant + 0x2FC + town_index*4` and the company value at `merchant + 0x46C` - the
 `0xDBBA0` = 900,000 comparison at `0x004F7AD4` is the Patrician step of the table above.
 Observed values in a live 24-town game run 3..5 for the AI merchants, and the
-[pirate AI](../pirates.md) reads the home-town entry as its "is this merchant worth
-robbing" test.
+[pirate AI](../pirates/ai.md#the-decision-to-attack) reads the home-town entry as its
+"is this merchant worth robbing" test - for **player-owned** prey only, so the rank the
+player holds at home is what decides whether pirates bother with him at all.

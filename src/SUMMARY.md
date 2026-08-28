@@ -60,6 +60,7 @@
     - [Money Lender](./towns/money-lender.md)
     - [Sieges](./towns/sieges.md)
         - [Initialization](./towns/sieges/initialization.md)
+    - [Port Freezing](./towns/port-freezing.md)
 - [Merchants](./merchants.md)
     - [Ranks](./merchants/ranks.md)
     - [Reputation](./merchants/reputation.md)
@@ -112,6 +113,7 @@
     - [Isometric Tiles (.let)](./file-formats/let.md)
     - [Tile Groups (.lgr)](./file-formats/lgr.md)
     - [AIM Images (.aim)](./file-formats/aim.md)
+    - [Won Game Record (.eld)](./file-formats/eld.md)
 
 # Interface
 
@@ -146,6 +148,10 @@
     - [Patrol Letter Crash](./bugs/patrol-letter-crash.md)
     - [Tavern Mission Lock Leak](./bugs/tavern-mission-lock-leak.md)
     - [Texture Cache Thrash](./bugs/texture-cache-thrash.md)
+    - [Town View Fill Out of Bounds](./bugs/town-view-fill-oob.md)
+    - [Feeding the Poor Prices Wine as Salt](./bugs/feeding-the-poor-wine-price.md)
+    - [Church Window Animation Crash](./bugs/church-window-animation-crash.md)
+    - [Captain Retirement Freeze](./bugs/captain-retirement-freeze.md)
 - [Community Tools](./community-tools.md)
 
 ---

@@ -191,3 +191,37 @@ whole answer.
 
 `0x12` is an AI pirate vessel at sea; `mod-scrollmap-render-all-ships` draws exactly
 `0xF` and `0x12`.
+
+## The Ships Tick and the Two Ship Lists
+The per-ship simulation is `0x00506720`, thiscall on the static `ships` struct and
+called from exactly one place, `0x00531011`. It does not walk the ships array. It walks
+**two linked lists**, and switches each ship on `field_134_status` through a jump table:
+
+|List head|Statuses handled|Jump table|Index table|
+|-|-|-|-|
+|`ships + 0xE8`|`0x00`..`0x11`|`0x00507CB0`|`0x00507CDC`|
+|`ships + 0xEA`|`0x0A`..`0x16`|`0x00507CF0`|`0x00507D04`|
+
+The second list is the ships at sea: status `0x0F` is handled there, and so are the
+raider statuses `0x11` and `0x12`. A status with no entry falls to a do-nothing default.
+
+**Both lists are linked through `field_6`.** That field is named for the convoy chain,
+and it does serve that purpose, but the tick uses it as the list link as well: the walk
+keeps a cursor pointing at the current link slot, so a ship leaves its list by
+`[cursor] = ship->field_6; ship->field_6 = 0xFFFF`, which is what happens when a ship at
+sea enters port.
+
+### The Docking Chain
+Separately from those lists, ships are kept in a **doubly-linked chain ordered by
+`+0x1E`**, using `+0xA` as the previous and `+0xC` as the next index, `0xFFFF` at the
+ends. (The struct dump above names these `field_A_some_ship_id` and
+`field_C_next_spotted_candidate`, which predates this.)
+
+|Function|What it does|
+|-|-|
+|`0x0050D0C0`|insert, walking the chain to keep it sorted on `+0x1E`|
+|`0x0050D040`|unlink: repair both neighbours' links, then write `0xFFFF` into the ship's own two|
+
+`0x0050D040` is called from 37 sites against 4 inserts, including on the ordinary path
+of a ship entering port. **It removes a ship from a list; it does not destroy or despawn
+one** - worth stating because its shape invites the opposite reading.

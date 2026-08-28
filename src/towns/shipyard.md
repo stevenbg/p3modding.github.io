@@ -116,5 +116,103 @@ price = base_price
 ```
 
 ## Repairs
+Repairing is driven by a queue on the shipyard, but - unlike shipbuilding - **the ships in
+that queue do not compete with each other**. Each of them is mended at the yard's full rate,
+so ten ships under repair finish just as fast as one.
+
+### Ordering a Repair
+Operation `0x03` reaches `handle_repair_ship` at `0x0052ACD0`, a `thiscall(town, ship*)`. It
+refuses unless the ship's status (`+0x134`) is below `4`, i.e. it is in port.
+
+The cost is per ship, from `0x0052A9E0`, which reads the shipyard's *utilization markup* and
+steps off it in bands. If the ship belongs to a convoy the handler sums the cost over every
+member, walking the convoy's member chain from `convoy + 0x0A` through `ship + 0x6`, and
+likewise sums the members' `+0x18` health against their `+0x14` maximum to decide whether
+there is anything to repair at all.
+
+Three outcomes, each announced by a letter (the [message pool](../letters.md) entry's type
+byte at `+0x4`):
+
+|Condition|Type|Text|
+|-|-|-|
+|no damage found|-|*"%s %s cannot be repaired. The shipyard in %s could not find any damage..."*|
+|money short|`2`|*"...you cannot pay the agreed price of %i..."*|
+|accepted|`1`|*"The shipyard in %s is repairing %s for you. The actual condition amounts to %i%%..."*|
+
+On acceptance the **full price is deducted immediately** (`0x0052AF68`), booked to the
+merchant's expense field `+0x4AC`, and the ship's status becomes `4`. The condition printed
+in the letter is `health * 100 / max_health` (`0x0052AF34`).
+
+### The Repair Queue
+The shipyard keeps two independent ship chains, both linked through `ship + 0x6` - the same
+multi-purpose link the ship tick lists and the convoy member chain use:
+
+|Field|Chain|Ship status|Appended by|Worked by|
+|-|-|-|-|-|
+|`town + 0x81C`|under construction|`0x0E`|`0x00507EA4`|`0x005083B0`|
+|`town + 0x81E`|under repair|`6`|`0x0052AC80`|`0x00508AA0`|
+
+A ship reaches the repair chain on the first ship tick after the order: the status-`4`
+handler `0x00506A19` splices it out of the in-port list, writes `0xFFFF` into its `+0x6`,
+sets status `6`, and calls `0x0052AC80` to append it at the tail. From then on the ship is in
+no tick list at all - the shipyard is the only thing that touches it.
+
+If the ship's trade route was active (`+0x136 == 1`) the flag is parked as `2` for the
+duration, and restored to `1` on completion (`0x00508BF6`).
+
+### Repair Progress
+A town's facilities tick when [the town does](../time.md#towns), once per day. The shipyard
+branch of the per-facility production step (`0x005101D0`, branch `0x0051025A`) calls
+`0x0050E570`, which computes one work amount and hands the **same** amount to both chains:
+
+```python
+work = facility.employees * 100          # 0x0050E5D8
+advance_construction(town, work)         # 0x005083B0
+advance_repairs(town, work)              # 0x00508AA0
+```
+
+A [fully staffed shipyard](../reference/facilities.md#full-workforce-per-type) has 40
+workers, so a yard at full staffing does **4000 hull points per day**. Since a ship's maximum
+health is `2800 * structure_base_value`, that is a little over 2% of a quality-level-3 hulk
+per day.
+
+`advance_repairs` walks the whole chain from `town + 0x81E`:
+
+```python
+work = args.work                     # re-read every iteration, 0x00508ADE / 0x00508C5F
+for ship in repair_chain:            # 0x00508AD9 .. 0x00508C80
+    ship.health += work              # 0x00508AF8, ship + 0x18
+    town.pending_experience += work  # 0x00508C6F, town + 0x814
+    if ship.health >= ship.max_health:
+        finish(ship)
+```
+
+The work amount is loaded from its stack slot on every pass of the loop and is **never
+divided by the queue length nor decremented as ships consume it**. That is what makes repairs
+non-competing, and it is the one place where repair and construction differ in kind:
+construction really does queue, which is why the shipyard window's estimate `0x0052AFC0` sums
+the outstanding work of every ship *ahead* of the one asked about.
+
+### Completion
+When a ship reaches its maximum health it is clamped to it, unlinked from the chain, relinked
+into the in-port list at `ships + 0xE8`, and given status `5` (`0x00508BCE`). Only the part of
+the last work amount that was actually used is credited as experience (`0x00508B30`).
+
+A letter reports it - type `7`, *"Repairs completed in %s"*, chosen at `0x00508B86` by testing
+whether the status was `6` (repair) or not (a newly built ship, type `10`). Ships on a trade
+route are skipped: the letter is suppressed when `ship + 0x136 & 3` is set (`0x00508BA1`).
+
+**Switching a ship's trade route back on ends its repair.** A queued ship whose `+0x136`
+reads exactly `1` is taken out of the chain unfinished and put back with status `5`
+(`0x00508C11`). Since entering the yard parks an active flag as `2`, this happens only when
+the route is re-activated while the ship is being repaired - the case behind the message
+*"Repairs on the ship will be discontinued on sailing."*
+
+### Repairs and the Utilization Markup
+Every ship in the repair chain credits its full work amount to the town's *pending
+experience* separately, so N ships being repaired earn the yard N times the experience.
+[Scheduled task `0x06`](../scheduled-tasks/0006-update-shipyard-experience.md) banks that
+weekly - and because pending experience is also a term in the utilization markup, a yard kept
+busy with repairs becomes both more experienced and more expensive.
 
 ## Upgrade Levels

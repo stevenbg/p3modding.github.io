@@ -105,6 +105,26 @@ The "Found Settlement" alderman mission UI does not use the definitions from `sc
 ## Town Names
 There is an array of pointers (indexed by the town's **index**) to town names at `0x006DDA00`.
 
+## Town Flags
+`field_2C8_town_flags` carries the town's weather and crisis state. The bits identified
+so far, and where each is established:
+
+|Bit|Meaning|
+|-|-|
+|`0x2`|winter. Rewritten from the calendar by the town tick every day (`0x0051BA47`); the four crop producers scale their output by it - see [Production](./towns/production.md)|
+|`0x8`|blocks [population growth](./towns/population.md) entirely|
+|`0x10`|siege. Tested on its own at `0x0051BD38` in [Excess Consumption](./towns/excess-consumption.md)|
+|`0x200`, `0x800`|blockade and pirate attack - see [Thresholds](./towns/ware-prices/thresholds.md) for which is which|
+|`0x400`|a third condition that closes the port: the ships tick's destination check reads it beside blockade and frozen, but only refuses ships owned by a real merchant. Meaning not identified|
+|`0x04000000`|the port is frozen - see [Port Freezing](./towns/port-freezing.md)|
+|bits `17`..`22`|masked and refilled by the same town tick (`0x0051BD04`); unrelated to the above|
+
+`update_town_price_thresholds` reads four of them together as the crisis mask
+`0x04000A10` (`0x005280B7`) - siege, blockade, pirate attack and frozen - and stretches
+`t1` to 28 days, doubles the building-material factor and adds the food demand bitmask
+when any is set. A search for one of those bits as a literal will not find that site,
+because the constant in the code is only ever the combined mask.
+
 ## Town Struct
 The pointer to the towns array is stored in the static `game_world` struct at offset `0x68`, and the length of that array at offset `0x10`.
 **A town's id is not its index in the towns array**.

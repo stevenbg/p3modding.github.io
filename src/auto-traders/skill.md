@@ -60,6 +60,21 @@ well beyond that threshold.
 Measured on a live save: `trade - combat` was unchanged for every captain across two dumps
 259 days apart, except where one of the two had met its ceiling in between.
 
+### The Threshold and the Ceilings Are Separate Tables
+The ceiling table exists twice, byte-identical (`250, 200, 250, 150`), and each copy
+has exactly one consumer - a full-executable cross-reference finds no other reads:
+
+|Table|Read by|Sites|
+|-|-|-|
+|`0x00672824`|the sweep's **gate** (human branch only), always indexed with the navigation bits|`0x004DD0EC`, `0x004DD0F7`|
+|`0x00673B34`|the gain handler's **clamp**, indexed per skill|`0x00538AE7`, `0x00538B10`, `0x00538B37`|
+
+So the threshold `T` and the real ceilings are independently patchable: raising the
+gate table alone stops the sweep refusing trade and combat rolls while the clamp
+still enforces every skill's own ceiling - which is what `mod-fix-captain-skill-cap-gate`
+does. Since a refused roll and a clamped-to-ceiling gain have the same outcome, that
+is behaviourally a correct per-skill gate.
+
 ## Where a Captain Ends Up
 For a human player's captains the [ten-day sweep](../scheduled-tasks/0003-ten-day-update.md)
 only pays out while the skill it happens to test is below `T`. Combined with the shared gain

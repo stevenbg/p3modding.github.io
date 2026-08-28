@@ -26,7 +26,9 @@ Which path runs depends on the owner:
   enqueues [operation `0x13`](../operations/0013-captain-retirement.md), which schedules the
   same task and sends the player a message.
 
-Task `0x27` is what actually takes the captain off his ship.
+Task `0x27` is what actually takes the captain off his ship - and it can freeze the game
+outright if the captain has moved since it was scheduled, see
+[Captain Retirement Freeze](../bugs/captain-retirement-freeze.md).
 
 ## Nothing Retires in a Tavern
 The sweep only walks merchants' ship chains, so a record waiting in a tavern is never

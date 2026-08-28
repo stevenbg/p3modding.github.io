@@ -56,20 +56,28 @@ attacked. In order:
 
 - **Never its owner.** `field_15D` holds the merchant a pirate belongs to; that merchant's
   ships are skipped, which is what protects a player's fleet from his own hired pirate.
-- **Never a protected merchant.** If the prey's owner has bit `0x4` in `merchant+0x8`, the
-  ship is skipped. In a live 24-town game that bit is carried by merchants 0..23 - exactly
-  one per town, hometown equal to index - and across 27 observed raids not one victim came
-  from that group. The same bit also excludes those merchants from the letter that
-  operation `0x3E` posts and from the dynamic name registry used by operations `0xB6` and
-  `0xB8`, so it marks a static background merchant rather than a piracy rule as such.
-- **The restraint counter.** For an AI-owned ship the pirate's `field_138` must be exactly
-  `0`; for a **player-owned** ship anything up to `0x900` (nine days) will do.
-- **Worth robbing at all.** Both branches also require the owner's **rank in his home
-  town** plus the Pirates activity setting to reach 2. At *high* activity that is
-  satisfied by any rank, at *normal* it needs rank 1, at *low* rank 2 - so the lowest
-  ranks can be beneath a pirate's notice, and the more the setting is turned down the more
-  established a merchant has to be before he is worth attacking. Rank is the byte at
-  `merchant + 0x39C + town`, computed in front of
+From here the test **splits on who owns the prey**, on the control word `merchant + 0x8`:
+zero is a human-controlled merchant, non-zero an AI one. (The same word builds the ten-day
+captain scan's own player test with `cmp / sete` at `0x004DCF7E`, and gates the AI
+auto-routing call at `0x00506826`, which runs only when it is non-zero.) The two branches
+share nothing but the checks further down:
+
+- **AI-owned prey** must not be a **protected merchant**: if the owner has bit `0x4` in
+  `merchant+0x8` the ship is skipped. In a live 24-town game that bit is carried by
+  merchants 0..23 - exactly one per town, hometown equal to index - and across 27 observed
+  raids not one victim came from that group. The same bit also excludes those merchants from
+  the letter that operation `0x3E` posts and from the dynamic name registry used by
+  operations `0xB6` and `0xB8`, so it marks a static background merchant rather than a
+  piracy rule as such. Its restraint counter `field_138` must then be exactly `0`.
+- **Player-owned prey** is instead measured by **rank**: the owner's rank in his **home
+  town** plus the Pirates activity setting must reach 2 (`0x0051543B`). At *high* activity
+  any rank satisfies it, at *normal* it needs rank 1, at *low* rank 2 - so a beginner can be
+  beneath a pirate's notice, and the further the setting is turned down the more established
+  the player has to be before he is worth attacking. Being successful is what draws pirates,
+  which is the opposite direction from an underworld reputation. Its restraint counter is
+  the lenient one: anything up to `0x900` (nine days) will do.
+
+  Rank is the byte at `merchant + 0x39C + town`, computed in front of
   [update_merchant_reputation_and_value](../merchants/reputation.md) from the per-town
   reputation float at `merchant + 0x2FC + town*4` and the company value at `+0x46C`
   (see [Ranks](../merchants/ranks.md#where-the-rank-is-stored)). 

@@ -57,7 +57,7 @@ names; a few do their work inline in the dispatcher instead.
 |`0x0a`|`0x004E2CD4`||
 |`0x0b`|`0x004E37F4`||
 |`0x0c`|`0x004E38B4`|Land Transport Arrival|
-|`0x0d`|`0x004E4984`||
+|`0x0d`|`0x004E4984`|Daily Weather ([Port Freezing](./towns/port-freezing.md))|
 |`0x0e`|`0x004E4A44`||
 |`0x0f`|`0x004E5664`||
 |`0x10`|`0x004E63E4`||
@@ -76,7 +76,7 @@ names; a few do their work inline in the dispatcher instead.
 |`0x1d`|`0x004E9564`||
 |`0x1e`|`0x004DFD44`||
 |`0x1f`|`0x004E0334`|Pirate bands ([Pirates](./pirates.md))|
-|`0x20`|`0x004DBBD0`||
+|`0x20`|`0x004DBBD0`|Writes [`LastWon.eld`](./file-formats/eld.md)|
 |`0x21`|`0x004DC1F0`||
 |`0x22`|`0x004DB7C0`||
 |`0x23`|`0x004E09D4`|Pirate bands ([Pirates](./pirates.md))|
@@ -111,8 +111,22 @@ stub at `0x004D8937`:
   reached `0x5D00` ticks (93 days), then restamps `data+0x8` with the current serial - so
   that handler runs at most once a quarter;
 - calls `0x004DEBA0` only when the dword at `0x006DF31C` is zero (the dispatcher zeroes `ebp`
-  at `0x004D85EB` and compares against it). What that global means has not been identified;
+  at `0x004D85EB` and compares against it) - which is **always**, since that global is never
+  written: see [a global that is only ever read](#a-global-that-is-only-ever-read);
 - then reschedules with `due += data+0x4`.
+
+### A Global That Is Only Ever Read
+`0x006DF31C` is tested for zero in about **68 places** - the task dispatcher above, the town
+tick, `execute_operations`, the captain scan's player branch, and a long tail of UI code -
+and **nothing ever writes it**. A byte scan of the executable finds every reference preceded
+by a load (`a1`, `8b 0d`, `8b 15`) or a compare (`39`, `3b`): no store, no `lea`, and the
+address is never pushed, so no memset or buffer write can reach it either. It sits above
+`0x006CC000`, in uninitialised data, so it is zero from process start and stays zero.
+
+Every branch guarded by it therefore always takes the zero path. The sites are all places a
+network client would want to skip, which makes "am I a client" the natural reading, but it
+cannot be confirmed from this binary and it does not matter for modding: the alternative
+path is dead code.
 
 ### Clear a Merchant Flag Bit (`0x37`)
 Opcode `0x37` has no handler function of its own - the dispatcher does the whole job inline

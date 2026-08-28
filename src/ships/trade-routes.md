@@ -54,3 +54,42 @@ Finally, the stop's [action byte](../file-formats/rou.md#action-byte) is consult
 bit `0x04` (the first stop of the route) builds a record from the captain's name ids and the
 ship's registry id and passes it to `0x004D6530`, and bit `0x02` clears the low bits of
 `ship+0x136` once the stop is finished.
+
+## Is the Route Running
+**Bit `0` of `ship+0x136`** is the switch: the ships tick only executes a stop for a ship
+that has it set, and it is the [ship panel](../ui/ship-panel.md)'s "active" checkbox.
+
+[Operation `0x68`](../operations/0068-set-trade-route-active.md) is what moves it.
+Activating writes the whole byte as `0x01` (`0x0053E0F3`); deactivating clears the low
+two bits with `and 0xFC` (`0x0053DF4D`). Both paths also set `0x8` in `ship+0x3D`
+(`0x0053E0E8` and `0x0053DF49`). A finished stop whose action byte has `0x02` clears
+the low bits too, as noted above.
+
+So the byte is not a set of independent flags to be OR-ed at will - the activate path
+overwrites it - and the reliable read for "is this ship trading" is `ship+0x136 & 1`.
+
+## A Closed Destination Port
+Before a ship at sea reaches its destination, the status `0x0F` handler checks whether
+that port will admit it (`0x00506D8E`). It reads the flags of the town in
+`field_39_last_town` - the destination while a ship is under way - and refuses entry
+when:
+
+- the port is [frozen](../towns/port-freezing.md) (`0x04000000`) or blockaded (`0x200`); or
+- flag `0x400` is set **and** the ship belongs to a real merchant with `ship+0x136 & 1`.
+
+A refused ship is turned away rather than stopped mid-ocean (`0x00506E85`): the town that
+refused it is recorded in `ship+0x37`, the destination `field_39` is cleared to `0xFF`,
+the status stays `0x0F`, and then an AI-owned ship is given a new destination
+(`0x0051A2C0`) while a player-owned one goes to `0x004D5900`, which advances
+`ship+0x132` to the next stop of its route. Otherwise the handler falls through to
+`0x00506EF9`, which splices the ship out of the at-sea list and docks it.
+
+**A ship whose remaining destinations are all closed therefore runs out of stops**, and
+the game says so: *"%s's trade route: no destination specified"*. The route status
+messages live in a pointer table based at `0x006B04F4`, indexed at `0x005486FD` by a
+fall-through switch that formats the ship's inline name (`ship+0x160`) into the `%s`.
+Its neighbours in the table are *"%s's trade route is interrupted"*, *"ship condition too
+poor"*, *"new ship joined"* and *"crew number too low"*.
+
+This is what makes a winter freeze visible to the player as auto-trade ships going idle:
+on a short route whose towns all ice over, there is nothing left to sail to.

@@ -118,12 +118,22 @@ routine per type, each with its own hardcoded wares and scale factors:
 |FarmGrain|`0x00510446`|`0x0050EAD0`|FarmHemp|`0x0051071E`|`0x0050EBF0`|
 |FarmCattle|`0x00510486`|`0x0050F460`||||
 
+Shipyard and Construction have no producer because they make no ware. The **Shipyard** branch
+calls `0x0050E570` instead, which turns its staffing into `employees * 100` of work and spends
+it on the town's shipbuilding and [ship repair](../towns/shipyard.md#repair-progress) queues.
+
 Each producer takes `(storage, full_workforce, flag)` and does the same two things: add
 `efficiency * full_workforce / k` to the nominal array at `town + 0x490`, and
 `employees * efficiency / k` to the actual array at `storage + 0xC4`, alongside the stock at
 `storage + 0x4` and an 8-slot history ring at `storage + 0x13C` (24 wares, stride `0x10`,
 indexed by `([0x006DE4B4] >> 8) & 7`). A two-output type does it twice, and the `flag`
 argument gates the second ware.
+
+`k` is a constant folded into each routine, with one exception: the four **crop** producers
+(FarmGrain, Apiary, Vineyard, FarmHemp) read a factor out of `town + 0x2C8`, whose bit `0x2`
+is the winter flag - see
+[Winter](../towns/production.md#winter-the-crops-scale-k-by-a-town-flag-bit). The other
+seventeen never read it, so nothing but the crops changes with the season.
 
 The town's facilities are stored within the town struct.
 ```
