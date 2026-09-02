@@ -85,5 +85,17 @@ class Town:
         raise Exception()
 ```
 
+`has_mint` is **bit `0x400` of the [built-structures
+mask](../../reference/buildings.md#the-built-structures-mask)** at `town + 0x76C`, tested
+at `0x0051C671`. So a Mint lowers the divisor on the rich target from 320 to 213 - a
+**+50% rich-citizen target** for the same poor population and satisfaction. (Both
+divisors are reciprocal-multiply constants: `0x66666667 >> 7` is `/320`, and
+`0x99D722DB >> 7` with the add-back at `0x0051C67D` is `/213`.)
+
+**That is the Mint's only effect.** The bit has exactly three readers in the executable -
+this divisor, the setter, and the AI town planner's "already has one" test at
+`0x0051F87B` - so the Mint does nothing to money, interest, taxes or trade despite its
+name.
+
 For a fixed number of total inhabitants and satisfactions, the groups converge:
 ![image](./levels1.png)

@@ -86,10 +86,51 @@ the status stays `0x0F`, and then an AI-owned ship is given a new destination
 
 **A ship whose remaining destinations are all closed therefore runs out of stops**, and
 the game says so: *"%s's trade route: no destination specified"*. The route status
-messages live in a pointer table based at `0x006B04F4`, indexed at `0x005486FD` by a
-fall-through switch that formats the ship's inline name (`ship+0x160`) into the `%s`.
-Its neighbours in the table are *"%s's trade route is interrupted"*, *"ship condition too
-poor"*, *"new ship joined"* and *"crew number too low"*.
+messages live in a pointer table based at `0x006B04F4` (indices 6..11), formatted with
+the ship's inline name (`ship+0x160`) by the note renderer - the notes' subtype space,
+creator and dispatch are on their own page, [Ship and Route Notes](../letters/ship-notes.md).
 
 This is what makes a winter freeze visible to the player as auto-trade ships going idle:
 on a short route whose towns all ice over, there is nothing left to sail to.
+
+## The Six-Hour Dwell and the Give-Up {#crew}
+
+A route ship sits **six hours at every stop record**: the word at `ship+0x138` counts
+the ticks (1/256 day) since arrival, and the route logic acts when it reaches `0x40` =
+64 ticks. A template that visits the same town with several consecutive stops pays the
+dwell at each one (play-verified) - the travel between them is free, the waiting is not.
+
+When departure time comes, the check at `0x00518A96` compares the crew (`ship+0x40`)
+against the ship type's **minimum sailors** (the byte table `0x673660`, see
+[Crew](./crew.md)). A crew below it files the *"crew number too low"* note
+(`0x00518AB2`) - the classic aftermath of a pirate attack - while a ship that cannot
+proceed for other reasons files the generic variant (`0x00518ABD`).
+
+The same 64-tick constant also ends the **entering-port** phase - these are arrivals,
+not give-ups: a lone ship in status `3` counts `ship+0x138` to `0x40` and then the
+status-3 handler calls the dock function (`0x00506AA9`), while a convoy counts its own
+`convoy+0x16` to `0x40`, zeroes its status word `+0x12` and docks **every member** in a
+loop (`0x005076EE`). The dock function `0x00519C90` is what both reach: status
+`ship+0x134` = 0, the moored flag `0x20` into `+0x3C`, the town's arrival counter at
+`+0x996` incremented, and the "has docked" note filed.
+
+## Travel Time
+
+The duration of a leg is `0x00516A2E`:
+
+```
+capacity_factor = 4096 - 614 * cargo_raw(ship+0x118) / capacity_raw(ship+0x10)
+health_factor   = clamp(165 + 130 * health(ship+0x18) / max_health(ship+0x14), 204, 256)
+speed_factor    = ((base_speed[type] * capacity_factor) >> 12) * health_factor >> 10
+travel_time     = 8 * route_distance / speed_factor
+```
+
+in **game ticks (1/256 day)** - calibrated against a sailed lap: a 3-stop loop computed
+at 13.74 days (empty hold, full hull, plus the dwell per stop) took "14 days and some
+hours" of game time. `base_speed` is the per-type word table at `0x0067366C`;
+`route_distance` is the pathfinder's octagonal length (`16*max + 7*min` of the axis
+deltas per segment) over the actual water route. A full hold costs 15% speed, and the
+damage penalty is capped at about 20%.
+
+Nothing in the formula is per-leg, so for a given ship travel time is a constant
+multiple of distance: the shortest tour is the fastest tour, whatever ship runs it.

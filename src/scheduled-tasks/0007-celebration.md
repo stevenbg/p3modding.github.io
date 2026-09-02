@@ -1,6 +1,15 @@
 # Celebration
 The `st_celebration` function is at `0x004E23A4`.
 
+## Announcing a Celebration
+The town hall's announce action (window handler `0x005E7730`) refuses unless the
+player's **standing** word (`merchant + 0x22`, see
+[Underworld Reputation](../merchants/underworld-reputation.md#what-it-is-good-for))
+is at least 20 (`0x005E775C`). It reads the celebration-type records at `0x006DE530`
+(stride 12) and sends operation `0x3D` (handler `0x0053A620`), which books one of the
+town's **two celebration slots** at `town + 0x830` and `town + 0x832` (`0xFFFF` =
+free) for a future timestamp - a town can hold at most two scheduled celebrations.
+
 ```
 00000000 struct scheduled_task_celebration // sizeof=0x10
 00000000 {
@@ -12,7 +21,12 @@ The `st_celebration` function is at `0x004E23A4`.
 ```
 
 ## Consumption
-The `celebration_base_consumption` table at `0x006734E8` defines the base consumption per guest:
+The `celebration_base_consumption` table at `0x006734E8` is a table of **bytes** read
+twice: by the attendance check below (`0x004E2491`) and by the consumption routine
+`0x005004C0`, which the handler calls with the guest count at `0x004E2506`. It is a
+table of its own - unrelated to the
+[citizen consumption](../towns/population/consumption.md) table at `0x00672860` - and
+defines the base consumption per guest:
 
 |Ware|Base Consumption|
 |-|-|
@@ -40,6 +54,7 @@ celebration_wares = [
 
 for ware in celebration_wares:
     base_consumption = guests * celebration_base_consumption[ware]
+    # has_famine is town flag 0x1000 (town + 0x2C8), tested at 0x005004EC
     scaled_consumption = base_consumption * (4 if has_famine else 2)
 
     # Ceil to the next barrel/bundle

@@ -1,8 +1,9 @@
 # Game Settings
 The choices made on the new-game screens live in one object, reached through the pointer at
-`[0x006CC3E8]`. Difficulty is a **preset** rather than a setting of its own: `+0x0E` stores
-which one was picked, and the individual settings it stands for are stored separately and can
-each be set on their own.
+`[0x006CC3E8]`. Difficulty is mostly a **preset**: `+0x0E` stores which one was picked, and
+the individual settings it stands for are stored separately and can each be set on their own.
+But the rank is also a value in its own right - see [Difficulty](#difficulty) below for the
+three places it acts directly.
 
 The block is initialised wholesale by the run of stores from `0x00463AEE` to `0x00463B89`.
 It writes `bl` into the dword at `+0x4` and into the bytes `+0x9`, `+0xD`, `+0xE`, `+0xF`,
@@ -29,6 +30,12 @@ which is where the screen's 1-based values become the 0-based stored ones:
 |`+0x13`|`window + 0x1B90`|yes|`0x0049935B`|
 |`+0x16`|`window + 0x1B94`|yes|`0x0049934A`|
 |`+0x17`|`window + 0x1B88`|yes|`0x0049938D`|
+|`+0x0E`|`window + 0x1BA4`|no|`0x004992F1`|
+
+The `+0x0E` copy sits just outside the run the others share. Its screen field `+0x1BA4` is
+loaded from `[SPIELEINST] SCHWIERIGKEIT` in `P2.CFG` (`0x00497C80`, clamped to `0..4` with
+out-of-range values defaulting to `2`) and written back at `0x00499CC0`/`0x00499CE7` - the
+five-rank difficulty, stored raw because unlike the steppers it is not 1-based.
 
 The seven that take the `-1` are **exactly** the seven bytes measured below as varying with
 difficulty, and their sources are seven consecutive dwords of an eight-entry array at
@@ -72,6 +79,41 @@ The seven fall into just two columns, and both are a halving of the preset index
 
 So the five presets walk the two columns half a step out of phase, across steppers that only
 have three positions each.
+
+## Difficulty
+
+Beyond selecting the preset, the rank at `+0x0E` acts in three ways, one of them live in
+every game:
+
+**Climbers, at world generation.** `0x00543810` (an operation handler at `0x00537020`)
+reads `+0x0E` directly and passes `rank + 1` to `0x00532420`, which first resets every
+merchant's reputation factor (`merchant + 0x464`, see
+[Recurring Constants](../merchants/reputation.md#recurring-constants)) to `1.0`, then marks
+`rank + 1` class-1 AI merchants - one per town, with a fallback loop at `0x0053251A` when
+towns run out - with control-word flag `0x8` and a factor of `2.0`. That flag's single
+reader is scheduled task `0x04` (`0x004DFC94`, the per-AI-merchant task): flagged merchants
+have their factor recomputed by the rubber-band `0x004F42B0` each cycle; unflagged ones
+keep `1.0` forever. **The rank is therefore the number of AI rivals that actively chase the
+leader's reputation - 1 to 5.** The second argument `0x00543810` passes -
+`float(settings + 0x11)` - is never read inside `0x00532420`: dead.
+
+**A multiplayer-only global.** The rank is published to `[0x006DE52C]` by operation
+`0xA9`, whose only producer (`0x00547F80`) is gated on the operation queue's networked
+flag (`test byte [queue],0xC` at `0x00547F74`, the same test the enqueue at `0x0054AA70`
+uses). **In single player the global stays 0 forever.** Its readers - the
+[church](../towns/church.md) capacities and costs, the donation-reputation divisor, and
+the `+0.05 * rank` shift of the rubber-band's clamp bounds - are all `rank 0` no-ops
+outside multiplayer.
+
+**A vestigial governor.** Scheduled task `0x2C`'s quarterly handler (`0x004DEA20`, run at
+most once per 93 days by the stub at `0x004D8937`) recomputes a `.10` fixed-point factor
+`108000 / total_population` into its record's `+0xC`, cut in bands when the leading human
+merchant's **total crew** (`merchant + 0x474`) grew more than 1.0x over the quarter - the
+measured ratio inflated by `rank * 102/1024` per rank. **Nothing reads the result**: the
+sibling handler `0x004DEBA0` never touches `+0xC`, no instruction in the executable
+compares a task kind against `0x2C`, and no stored-slot pattern exists for it. The nearby
+unreferenced `0x00502F50` (walks a ship chain summing artillery power) looks like another
+piece of the same cut feature.
 
 ## What Difficulty Does Not Affect
 Town [production](../towns/production.md) is untouched by it. Five games started at the five

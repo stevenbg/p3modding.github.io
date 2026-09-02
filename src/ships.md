@@ -148,8 +148,9 @@ base[ship_type & 3]                                    // 693, 693, 578, 578 at 
 - **Damage** costs up to about 35%, and the clamp means anything above roughly 80% of
   maximum health gives the full term - which is also the threshold at which a damaged
   pirate breaks off and sails home.
-- The **captain's navigation skill** is worth up to +10% (skill 255; the displayed level 5
-  is skill 215, so +8.4%, each level of 43 points being +1.7%). A ship with **no** captain
+- The **captain's navigation skill** is worth up to +10% (skill 255), and it scales with the
+  raw byte rather than the displayed step: a captain the panel shows as 5 holds at least 250,
+  worth +9.8%, and each displayed step of 50 points is +2%. A ship with **no** captain
   skips the factor entirely and so matches a navigation-0 captain: captains never make a
   ship slower.
 
@@ -191,6 +192,10 @@ whole answer.
 
 `0x12` is an AI pirate vessel at sea; `mod-scrollmap-render-all-ships` draws exactly
 `0xF` and `0x12`.
+
+`0x14` is a ship engaged in a [sea battle](./ships/sea-battles.md) - measured on both
+participants of a pirate attack, and held for the whole fight. `0x0050BC40` writes the same
+value as the convoy status when a pirate engages (see [The Pirate AI](./pirates/ai.md)).
 
 ## The Ships Tick and the Two Ship Lists
 The per-ship simulation is `0x00506720`, thiscall on the static `ships` struct and

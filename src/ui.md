@@ -276,6 +276,54 @@ violation in that copy. With any text after the escape the length stays positive
 renders, at the cost of one following character being swallowed - so a `\dX` wants a
 spare character behind it.
 
+## Fonts
+
+The game has **six** global fonts, held in an array of containers of stride `0xA8` based at
+`0x006DCD28`. `0x004BB8F0` (`sgl_SetFont`) takes the font itself, which is the pointer at
+`container + 0x98`.
+
+They are `scripts/fonts.ini`'s `Font0` through `Font5`, in order:
+
+|Index|Container|`fonts.ini`|File|Params (w h spacing)|Code references|
+|-|-|-|-|-|-|
+|0|`0x006DCD28`|`Font0`|`tiepolo_black16.aim`|15 16 0|458|
+|1|`0x006DCDD0`|`Font1`|`tiepolo_bold16.aim`|15 16 0|290|
+|2|`0x006DCE78`|`Font2`|`tiepolo_black20.aim`|19 20 0|90|
+|3|`0x006DCF20`|`Font3`|`elgreco24.aim` (kerning)|26 24 0|60|
+|4|`0x006DCFC8`|`Font4`|`tiepolo_bold24.aim`|25 24 0|30|
+|5|`0x006DD070`|`Font5`|`elgreco72.aim`|80 75 0|13|
+
+All six are referenced from code, with the counts above; the next slot along is not a font
+container. Pairing the container index to the `fonts.ini` index follows from that ordering
+and those counts rather than from a decoded loader.
+
+Note **indices 0 and 1 are the same size** - Tiepolo Black against Tiepolo Bold - so the
+face the parchment pages use for headings is *heavier* than their body text, not larger.
+Index 3 is a different typeface entirely and is what the scrollmap's town names are drawn
+in.
+
+The sizes are not free parameters. `Params` declares each font's cell size, but the files
+are **`.aim` bitmap atlases** with the glyphs pre-rendered at that size, so raising the
+numbers would misread the atlas rather than scale the text. Six sizes is what exists. The
+CJK localisations take a second path - `scripts/ttffonts.ini` maps the same `Font0`..`Font5`
+onto `msgothic.ttc`, and there the size genuinely is a parameter because the glyphs are
+rasterised on demand.
+
+### The Constant Colour Blends
+
+`0x004BB870` (`sgl_SetConstantColor`) takes `0xAARRGGBB`, and **the alpha byte is
+honoured**: a fill through `0x004BB430`
+(`sgl_FillSolidRect`) at `0x80......` draws as a translucent plate rather than an opaque
+one. Every call the executable makes itself passes `0xFF`, so this is only visible to a mod
+that tries it - verified in play with a half-alpha plate behind text on the
+[ship panel](./ui/ship-panel.md).
+
+
+Prefer the thunk over the library's own entry. `ddraw_dll.dll` loads at a *preferred* base
+- `0x05000000` in a measured run - so an address inside it is only valid while nothing else
+has claimed that range; the exe's thunks are immune, because the exe has an empty
+relocation table and the loader fills their slots.
+
 ## Graphics and Icons
 Every drawing call named on this page is a thunk into `ddraw_Dll.dll`, the
 [SGL graphics library](./graphics.md) - that page lists which export each thunk

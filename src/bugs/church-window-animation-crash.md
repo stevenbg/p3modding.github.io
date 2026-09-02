@@ -53,9 +53,20 @@ streams church frames into an array sized and cursored for a different animation
 silent heap overwrite.
 
 ## How a stale mode arms it
-The window is recreated on every menu-path load, but its constructor never writes
-`+0x1D30`, and the new window usually mallocs into the LFH block the old one vacated
-- so the mode is **recycled from the previous session**. The open path only calls
+The window is recreated on every menu-path load, but its constructor (`0x005C88E0`)
+never writes `+0x1D30` - it initialises the neighbouring `+0x1D5F` two instructions
+before returning (`0x005C8CB2`) and misses this one; only four sites in the executable
+write the field (close `0x005C94AC` to `-1`, set_mode `0x005C9DD1`, and the page setters
+`0x005CB08C`/`0x005CB7A3`). The new window usually mallocs into the LFH block the old one
+vacated - so the mode is **recycled from the previous session**.
+
+The same uninitialised field has a harmless face that shows in every session: on a cold
+start the block reads `0`, so the window's first open dispatches page 0 (blank) instead of
+the `-1` it settles on after its first close. Measured live: `page=0` on the first church
+of a session, `page=-1` on every one after, across several loads. The neighbouring
+`+0x1D5E` (the cached [decoration level](../towns/church.md)) is recycled the same way,
+but every one of its readers is gated on `mode > 0` and set_mode writes the mode first, so
+a fresh mode makes a stale `+0x1D5E` unreachable too. The open path only calls
 set_mode when a specific page was requested: the tab-request byte (`+0x4D2` of the
 tab controller) is `0xFF` after any previous open, and `0xFF` skips both set_mode
 calls (`0x005A5BDD`). Result: leave the church in an animating state (any donation
@@ -70,7 +81,14 @@ and its teardown call is followed by resetting the player's `+0x38` by hand
 of checking.
 
 ## The fix
-`mod-fix-church-anim-crash` patches three bytes in the tick so that "not my loop
+Since 29 Aug 2026 `mod-fix-church-anim-crash` fixes the defect at its source: it hooks the
+constructor's single call site (`0x00426BBD`, whose result is stored to the window global
+`[0x006E556C]` at `0x00426BD6`) and writes `-1` - the value the close method uses - into
+`+0x1D30` of the object the constructor returns. That removes the stale mode entirely,
+and gives the window its empty page on a cold open as a side effect.
+
+The mod's previous fix is kept in its source as a dormant fallback: three bytes in the
+tick so that "not my loop
 animation" - fresh player, foreign animation, or the thanks handover - routes
 through switch_animation, which allocates, loads frame 0 and positions the sprite:
 
@@ -81,6 +99,7 @@ through switch_animation, which allocates, loads frame 0 and positions the sprit
 |`0x005C9631`|`jne`|`je`|equal streams the next frame, anything else switches|
 
 All six mode/flag/current combinations were enumerated: every previously working
-path is unchanged, and the two broken ones now play the loop animation. As belt and
-braces the mod also detours the player's three unguarded methods to bail out when
-the frame array is NULL.
+path is unchanged, and the two broken ones now play the loop animation. That version
+also detoured the player's three unguarded methods to bail out when the frame array
+is NULL. None of it is installed while the constructor fix holds; it exists to be
+re-enabled if the crash ever returns by a route that does not go through the mode.

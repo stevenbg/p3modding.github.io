@@ -1,7 +1,15 @@
 # Skill
 Every [auto trader](../auto-traders.md) carries three skill bytes - `field_9` navigation,
-`field_A` trade, `field_B` combat - which the interface shows as 0 to 5 stars, one star per
-43 raw points. This page is the whole story of how they move.
+`field_A` trade, `field_B` combat - which the interface shows as 0 to 5, **one step per 50
+raw points**. This page is the whole story of how they move.
+
+Beware a second, coarser step of **43** that looks like the same thing and is not. The
+tavern's captain-offer panel divides each of the three bytes by 50 (`0x005CFA50`,
+`0x005CFB11`, `0x005CFBD5` - the magic `0x51EB851F` with `sar edx,4`, and note it prints
+**trade first**, then navigation, then combat), while the buying discount and the
+administrator wage divide the trade byte by 43 (`0x004D5347`, `0x004FE160`: magic
+`0x2FA0BE83` with `sar edx,3`). So a captain the panel shows as trade 2 is already on the
+third pricing step, and the two numbers part company from 43 raw points upward.
 
 ## One Writer, One Clamp
 All three bytes are written by a single operation,
@@ -95,7 +103,7 @@ is 150 and whose trade and combat ceilings are both 250:
 
 |Skills as created|Where they end up|
 |-|-|
-|trade and combat both low|they cross 150 together and stop between 150 and 199 - displayed level 3 or 4, never the level 5 their own ceilings would allow|
+|trade and combat both low|they cross 150 together and stop between 150 and 199 - a displayed 3, never the 5 their own ceilings would allow|
 |trade 170, combat 15|combat's rolls keep paying trade, which reaches its 250 ceiling and is clamped there, while combat is dragged up to 150..199 - so trade does finish at level 5|
 
 Measured on a live save: a captain with `T` = 150 took combat from 205 to 240 over nine
@@ -115,8 +123,8 @@ That is not a corner case. The record initializer `0x004FDF50` produces each ski
 reinterpreting the bits of a float (`0x004FE046`, `0x004FE073`, `0x004FE0AE`), giving a
 roughly uniform `0..255` per skill with the sum capped at 600, so a fresh record above 150
 or 200 is common. Measured on a live save: a captain with all three skills at 253 was cut
-to `250 / 150 / 250` the first time the sweep reached him, losing 103 raw points - two and
-a half displayed levels - of trade. A captain can visibly drop from 4 stars to 3 shortly
+to `250 / 150 / 250` the first time the sweep reached him, losing 103 raw points - two
+displayed steps - of trade. A captain can visibly drop from a displayed 5 to a 3 shortly
 after being hired.
 
 ## Where Gains Come From
@@ -147,13 +155,14 @@ compute the percentage of the transaction price to pay from `field_A_trade_skill
 percent_paid = 2 * (50 - trade_skill / 43)
 ```
 
-`trade_skill / 43` is the displayed 0-5 skill level, so each level is worth 2%, up to a 10%
-discount at level 5 (skill byte 215). The administrator routine applies it right after
+The step here is **43, not the display's 50**, so each 43 raw points is worth 2% and the
+full 10% discount arrives at skill byte 215 - while the interface still shows that captain
+as a 4. The administrator routine applies it right after
 `get_buy_price` (`0x004FF944`: `price * percent / 100`, with the operand order flipped
 above `0x1000000` to avoid overflowing); its sell orders are settled through
 `get_sell_price` without any skill adjustment, so the discount is **buying-only**. An
 office whose administrator index (`office+0x2F2`) is invalid pays 100%.
 
-Office administrators gain trade skill in whole displayed levels even though the game never
-shows it, so a level 5 administrator quietly buys everything 10% cheaper - see
+Office administrators gain trade skill in whole 43-point steps even though the game never
+shows it, so an administrator at 215 quietly buys everything 10% cheaper - see
 [Administrators](./administrators.md).

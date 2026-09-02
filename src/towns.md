@@ -112,9 +112,10 @@ so far, and where each is established:
 |Bit|Meaning|
 |-|-|
 |`0x2`|winter. Rewritten from the calendar by the town tick every day (`0x0051BA47`); the four crop producers scale their output by it - see [Production](./towns/production.md)|
-|`0x8`|blocks [population growth](./towns/population.md) entirely|
+|`0x8`|**plague**. Rolled for by `0x004DCA90` and cleared by task `0x1C` when the outbreak ends; blocks [population growth](./towns/population.md) entirely while set - see [Plague and Fire](./towns/plague-and-fire.md)|
 |`0x10`|siege. Tested on its own at `0x0051BD38` in [Excess Consumption](./towns/excess-consumption.md)|
 |`0x200`, `0x800`|blockade and pirate attack - see [Thresholds](./towns/ware-prices/thresholds.md) for which is which|
+|`0x8000`|**fire**. Rolled for by `0x004DCBF0` - see [Plague and Fire](./towns/plague-and-fire.md)|
 |`0x400`|a third condition that closes the port: the ships tick's destination check reads it beside blockade and frozen, but only refuses ships owned by a real merchant. Meaning not identified|
 |`0x04000000`|the port is frozen - see [Port Freezing](./towns/port-freezing.md)|
 |bits `17`..`22`|masked and refilled by the same town tick (`0x0051BD04`); unrelated to the above|
@@ -239,10 +240,10 @@ The following fields have been identified:
 00000766 field_766 dw ?
 00000768 field_768 dd ?
 0000076C field_76C_more_flags dd ?
-00000770 field_770 db ?
-00000771 field_771 db ?
-00000772 field_772 db ?
-00000773 field_773 db ?
+00000770 field_770_chapels db ?                ; all chapels; +0x771 counts only the second completed-structure chain, which is what the plague roll reads
+00000771 field_771_chapels_town db ?
+00000772 field_772_hospitals db ?              ; same pairing as the chapels above
+00000773 field_773_hospitals_town db ?
 00000774 field_774 dw ?
 00000776 field_776_construction_sites_size dw ?
 00000778 field_778 dd ?
@@ -256,7 +257,7 @@ The following fields have been identified:
 0000078B field_78B db ?
 0000078C field_78C dw ?
 0000078E field_78E dw ?
-00000790 field_790_streets_built dw ?
+00000790 field_790_streets_paved dw ?           ; street tiles of the better grade (bytes 0x80/0x81); the plague roll wants this at >= 75% of +0x792
 00000792 field_792_streets_total dw ?
 00000794 field_794_church church ?
 000007A4 field_7A4_town_class1 town_class1 ?

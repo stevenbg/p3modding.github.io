@@ -44,27 +44,49 @@ task index with a variable slot in its upper half.
 Depending on the interaction type, one of the following actions may be done.
 
 ## 1
+Locks the person behind `town + 0x83E` (`0x0053C3FA`). No investigation - a
+non-criminal acquaintance.
 
 ## 3 and 8
+The tavern's hireable captains and pirates (`0x0053C531`): these people are
+**auto-trader records** (the array at `[0x006DD7A0]`, stride `0x10`, count
+`[0x006DD892]`), so the lock is the record's own merchant byte at `+0xF` rather than a
+town byte, and `field_4`'s low word carries the record index (its high word feeds the
+investigation roll). The criminal roll below runs **only for interaction type 8** - the
+pirate; type 3, the captain, locks the same way but is legal to talk to.
 
 ## 5
+Locks the person behind `town + 0x83F` (`0x0053C434`). No investigation.
 
-## Weapons Dealer
-If the interaction's merchant index is invalid, the town's weapons dealer is unlocked, and no other action is performed.
-This happens if a merchant navigates from the weapons dealer page to a different page.
+## Weapons Dealer (type 6)
+Handler `0x0053C2FB`, lock `town + 0x83D`. If the interaction's merchant index is
+invalid, the weapons dealer is unlocked and nothing else happens (a merchant navigated
+away from the page).
 
-Otherwise if the town's weapons dealder is unlocked, it'll be locked to the merchant, and a criminal investigation might be started.
-An investigation is started only if all of the following conditions are met:
-- The merchant is not the alderman
-- The merchant is not the mayor in the particular town
-- The town is not sieged, blocked, boycotted or under pirate attack
-- The following formula is true: `(rand & 0x3ff) < 102`
-- The following formula is true: `weaponsdealer_timestamp < now + 0x200`
+Otherwise, if the weapons dealer was unlocked, he is locked to the merchant and a
+criminal investigation might be started. An investigation starts only if ALL hold:
+- the merchant is not the alderman (`[0x006DE52D]`);
+- the merchant is not the mayor of this town (`town + 0x6F1`);
+- the town is not sieged, blockaded, boycotted or under pirate attack
+  (`flags & 0xE10 == 0`);
+- `(rand & 0x3FF) < 102` - a **~10% roll**;
+- `[town + 0x9EC] < now + 0x200`.
 
-If all conditions are met, a criminal investigation scheduled task is scheduled to `(now + 0x200) | 0x80`, and the weapons dealer timestamp is set to `now`.
+The last condition is vestigial: the timestamp is only ever written to `now` (on a
+successful roll) and zeroed at town init, so it can never be `>= now + 0x200` and the
+check never blocks. **There is no cooldown**: every page entry (the lock transitioning
+free -> taken) is an independent roll - switching pages and back, or closing and
+reopening the tavern, rolls again.
 
-## Burglar
-The burglar is handled like the weapons dealer, except the exceptions for alderman, local mayor and town status don't exist.
+On success a [criminal investigation](../scheduled-tasks/0005-criminal-investigation.md)
+task is scheduled to `(now + 0x200) | 0x80` (two days out, afternoon) with **crime
+type 0** ("criminal plans"), and the timestamp is set to `now`.
+
+## Burglar (type 7)
+Handler `0x0053C472`, lock `town + 0x83C`. Handled like the weapons dealer - the same
+10% roll, the same crime type 0, its own vestigial timestamp at `town + 0x9F4` - except
+the exemptions for alderman, local mayor and town status don't exist. The pirate
+(type 8 above) works the same way, with its timestamp at `town + 0x9F0`.
 
 ## 9
 The side room, where the tavern's [mission offers](../letters/71-tavern-missions.md) are

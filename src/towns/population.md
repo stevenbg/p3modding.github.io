@@ -133,8 +133,20 @@ decrease = min(current - target, (sqrt(total_citizens) + 9) / 10)
 **Beggars arrive at twice the rate they leave.** For a town of 4442 that is up to 14 a day in
 and 7 a day out. Three modifiers apply to the increase:
 
-- `town_flags & 0x8` (`town + 0x2C8`) **blocks it entirely**;
-- `field_76C & 0x1000` multiplies it by **1.3**;
+- `town_flags & 0x8` (`town + 0x2C8`) **blocks it entirely** - the bit is the town's
+  active **plague**: scheduled task `0x1C` (handler `0x004E9094`) sets it at
+  `0x004E9453` while posting the "Outbreak of the plague in %s" event (type `0x12`)
+  and letters to every merchant, and clears it at `0x004E9486` when the outbreak ends.
+  Which towns catch one, and what makes it likelier, is in
+  [Plague and Fire](./plague-and-fire.md);
+- `field_76C & 0x1000` - the town has a [**School**](../reference/buildings.md#the-built-structures-mask) -
+  multiplies it by **1.3**, exactly `(13 * increase + 9) / 10` truncated (`0x0051C1B1`).
+  That is the School's only effect anywhere in the executable: the bit has three readers,
+  this one, the setter, and the AI town planner's "already has one" test at `0x0051F893`.
+  Since beggars are the intake for everything else, the School is a growth-rate building -
+  it does not move the target, only how fast the town closes on it. Note the multiplier is
+  applied **after** the `min` against the deficit and is not re-clamped, so a town with a
+  School overshoots its beggar target slightly and settles by oscillating around it;
 - if the town has **no militia** (`facility[0].employees == 0`) an increase is floored so the
   result is at least **24**. With a militia there is no floor.
 
@@ -168,6 +180,22 @@ constant.
 Note the militia figures: a squad is 5 jobs, and 5 x 4 = 20 people, so it draws exactly the
 population those jobs support out of the beggar pool. Sailors are the exception at one beggar
 each, because they leave the town with the ship rather than living in it.
+
+Raising a squad has four further conditions, all in the operation `0x41` handler, and it
+costs weapons:
+
+- the town's **mayor** (`town + 0x6F1`) must be a **human** merchant (`merchant + 0x8 == 0`,
+  `0x0051D580`);
+- the pool must hold at least **20 beggars** (`0x0051D54C`) - the twenty the squad takes;
+- the town's eight per-type militia counters at `town + 0x998` and `town + 0x99C` must sum
+  to **less than the cap** at `town + 0x9A0` (the summing loop at `0x0051D520`);
+- **5 weapons** - 50 raw units, the militia wares scaling by 10 - of one of the four
+  [militia types](../reference/wares.md) are taken out of the **mayor's own trading office**
+  in that town (`office + 0x54 + type*4`, i.e. the office's slots for wares `0x14..0x17`),
+  and the squad is refused if that slot holds less (`0x0051D5AF`).
+
+So the militia is armed at the mayor's private expense, one weapon per militia man, and a
+town whose mayor is an AI merchant never raises one at all.
 
 Beggars also gate how many sailors a town can offer at all: the
 [sailor pool](../scheduled-tasks/001a-update-sailor-pools.md) cap is

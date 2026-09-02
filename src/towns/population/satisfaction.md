@@ -104,7 +104,40 @@ def get_ware_satisfaction(ware_id, population_type):
 current_satisfaction = 2 * (
     base_satisfaction
     + situational_modifiers
-    + unknown_modifiers # 9 total, 8 capped at 4
+    + town_modifiers      # see below
     + ware_satisfactions
 )
 ```
+
+A newly **founded settlement** holds all three values pinned (measured at exactly `40/40/40`
+across nine game days while every other town drifted) until its construction is complete -
+play-verified by the settlement's owner; the gating flag has not been located in the code.
+
+## The Town Modifiers
+
+The block at `0x0051C980`..`0x0051CA9C` accumulates a per-town term shared by all three
+classes. Fully decoded parts:
+
+- a constant **+9** (`0x0051CA9C`);
+- **+1 per completed [church extension](../church.md) stage** - `town + 0x7A3`, `0..3`,
+  added uncapped at `0x0051CA8F`. This is the extension's only satisfaction effect; the
+  church's *decoration* level is read by nothing but the town scene and the church window,
+  so jewellery donations do not move satisfaction at all;
+- **a tax penalty of `tax²/20`**: the low byte of `town + 0x6F8` is the town's **tax rate
+  in percent** (`0x0051CA7D`, the `*0.8 >> 4` idiom). Verified in game by moving one
+  town's tax slider: the byte tracked it exactly (10 -> 20 -> 0) while every other town
+  held the default `10` (town init `0x00528C64`). The penalty is savage at the top end -
+  `0` at 0%, `-5` at the default 10%, `-20` at 20% - and since the whole expression is
+  doubled, the swing from 0% to 20% is 40 points of stored satisfaction, four full
+  satisfaction classes. The tax dialog writes the byte alone, leaving the upper bits
+  untouched; a second setter at `0x00529FF2` also ORs the current date serial into the
+  upper bits and stores an amount into `town + 0x6F4`, and which action drives *that* one
+  is still unidentified (in the tested save both fields read zero everywhere).
+
+The remaining terms are each **capped at +4**, and their arithmetic is read even though
+the fields feeding them are not yet identified: one from
+`(now - [town+0x2D0]) / 7 >> 10` subtracted from 4 (a bonus that decays with time since
+whatever `+0x2D0` stamps), one from `[town+0x998] * 2000` per capita, one from
+`[town+0x78C] * 4 / [town+0x78E]` (two counters `add_town_building` increments), one from
+`([town+0x999]+[town+0x99A]+[town+0x99B]) * 50 / [town+0x786]`, and at least one more
+ahead of `0x0051C980`.

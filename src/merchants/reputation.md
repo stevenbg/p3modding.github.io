@@ -57,20 +57,31 @@ company_value_rep = min(5.0, company_value / 100_000.0)
 ```
 
 ## Spouse
-Every spouse has a fixed reputation bonus.
-TODO list options
+A married merchant adds a fixed bonus to his reputation **in his own hometown**, straight from
+`field_32_spouse_reputation_bonus` (`merchant + 0x32`) and unscaled:
+
+```c
+if (merchant[0x31] < town_count)                      // 0x31 = spouse's hometown, 0xFF = unmarried
+    merchant_rep[merchant[0x19]] += (float)merchant[0x32];
+```
+
+at `0x004F8198`. The value is the spouse's tier, so it is **0, 1 or 2** - `ernst` contributes
+nothing, `normal` one point, `nett` two. An AI merchant can carry 3, because that path rolls the
+value rather than deriving it from a tier. Which spouse a merchant is offered, and everything
+else the wedding sets, is in [Marriage](./marriage.md).
 
 ## Social
 `local_social_rep` is the merchant's social reputation in the town.
 It is changed through many actions, and degrades over time.
 
 ### Recurring Constants
-The following values appear in multiple calculations, and appear to have fixed values.
+The following values appear in multiple calculations. Both look constant in play, and
+neither actually is:
 
-|Name|Value|Location|
+|Name|Measures as|Actually|
 |-|-|-|
-|base_rep_factor|1.0|Merchant|
-|church_factor|0.0|GameWorld|
+|base_rep_factor|1.0|`merchant + 0x464`, recomputed per AI merchant by `0x004F42B0` (from scheduled task `0x04`) as `clamp(player_rank / own_rank, 0.7, 1.2)` - a **reputation rubber-band**: rivals trailing the player gain up to 1.2x, a leading rival 0.7x. It measures 1.0 for the player because the player is the reference. Only merchants carrying control-word flag `0x8` - the `difficulty+1` "climbers" marked at world generation (`0x00532420`) - are recomputed at all; everyone else keeps the 1.0 world generation writes. In multiplayer both clamp bounds shift up by `0.05 * difficulty`|
+|church_factor|0.0|the difficulty rank at `[0x006DE52C]`, `0..4` - see [Game Settings](../reference/game-settings.md#difficulty). **Zero in every single-player game**: the only writer is operation `0xA9`, whose producer is gated on the multiplayer flag|
 
 ### Loans
 When granting a loan, `local_social_rep` is increased as follows:
@@ -98,6 +109,12 @@ local_social_rep += effective_amount
     * base_rep_factor
 ```
 
+Only the reputation uses `effective_amount`: the handler (`0x004FE2D0`) deducts the
+**whole donation** from the merchant before the cap is even computed
+(`0x004FE2EE`/`0x004FE2F4`), so gold past the cap is simply lost. What the money buys -
+the church's decoration level and its decay - is on the [Church](../towns/church.md)
+page.
+
 ### Church Extension Donation
 Donations to the church extension influence the local social reputation as follows:
 ```
@@ -107,6 +124,10 @@ local_social_rep += effective_amount
     / (church_factor + 1)
     * base_rep_factor
 ```
+
+The same caveat as above: `0x004FE420` takes the money first and clamps the fund after,
+so overshooting the stage cost wastes the difference. Stage costs, the materials an
+extension consumes and its cooldown are on the [Church](../towns/church.md) page.
 
 ### Feeding the Poor
 The `handle_feeding_the_poor` function is at `0x004FE557` - a method on the town's church
@@ -187,9 +208,76 @@ Consequently, successfully bribing with 30000 or more gives the maximum social r
 A failed bribe decreases the social reputation by `2.0`.
 
 ### Degradation
+The three local components live together in the merchant, **three floats per town at
+`merchant + 0x11C`, stride `0xC`**, with the resulting per-town reputation written to
+`merchant + 0x2FC + town*4`. The loop at `0x004F81D6` degrades them and sums:
+
+```python
+for town in range(town_count):
+    social  *= 0.99                  # 0x00672DEC
+    trading *= 0.99
+    town_reputation = other_contributions + buildings + social + trading
+    if town_reputation < 0.0:
+        town_reputation = 0.0        # 0x004F8220
+```
+
+Slot order is `buildings` (`+0x11C`), `social` (`+0x120`), `trading` (`+0x124`): the
+social slot is the one every donation credit targets, e.g. `0x004F8AF0` writing
+`12 * (town + 0x18)`. **Only social and trading are multiplied by the `0.99`** - the
+buildings term is added untouched, so what a building earns is permanent while everything
+under [Social](#social) bleeds away at 1% per update.
 
 ## Trading
 TODO
 
 ## Buildings
-TODO
+`local_buildings_rep` is credited when a **town structure** is added by
+[`add_town_building`](../reference/buildings.md#the-built-structures-mask)
+(`0x00521900`), in the same block that takes the builder's money. Five of the structures
+credit it, and the routine differs per building:
+
+|Building|Id|Routine|Credit|
+|-|-|-|-|
+|Mint, School|`0x2a`, `0x2b`|`0x004F8C70`|`base_rep_factor`, flat and unconditional|
+|Hospital, Chapel|`0x29`, `0x2c`|`0x004F8A50`|`base_rep_factor`, skipped unless a town-population test passes|
+|Well|`0x28`|`0x004F89E0`|`base_rep_factor * 0.1` (`0x0066FD5C`), skipped by the ratio in [Well](#well)|
+
+The dispatch is a chain of `cmp` against the building id at `0x00522563`, reached only for
+ids above `0x1E`. Every other building id credits nothing. All five write the same slot -
+`merchant + 0x11C + town*12` - which is what identifies that slot as the buildings term,
+and as [Degradation](#degradation) notes, that slot never decays.
+
+**A merchant has to be behind the build.** `add_town_building` takes the builder's
+merchant index as its first argument, and at `0x005223A0` it skips the whole block - the
+money *and* the reputation - when that index is at or above the merchant count at
+`0x006DE4AA`. A structure raised without a merchant costs nobody anything and credits
+nobody.
+
+### Well
+The Well is the only one of the five whose credit depends on how many the town already
+has, and at a tenth of `base_rep_factor` it is by far the smallest:
+
+```python
+wells = town[0x789]                        # count of wells, after the build
+if town[0x2D4] < 1:                    return   # 0x004F8A04, also guards the idiv
+if wells * 2500 // town[0x2D4] >= 5:   return   # 0x004F8A25
+local_buildings_rep += base_rep_factor * 0.1
+```
+
+`town + 0x2D4` is the [total citizen count](../towns/population.md), so the test is
+`wells * 500 >= citizens` with the multiplication moved across. It reads the count
+*after* the new well is included - the Well's case at `0x005220C1` increments
+`town + 0x789` before the shared tail reaches the credit.
+
+That matters because the same two numbers gate construction. `0x005220C1` refuses the
+build unless `existing_wells * 500 <= citizens`, so the build rule and the credit rule
+are near-inverses and **the last well a town will accept always earns nothing**:
+
+|Citizens|Wells the town allows|Of those, wells that pay|Total earned|
+|-|-|-|-|
+|1000|3|1|0.1|
+|3000|7|5|0.5|
+|5000|11|9|0.9|
+
+Whether one or two trailing wells earn nothing depends on the citizen count: exactly two
+when it is a multiple of 500, one otherwise.
