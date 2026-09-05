@@ -57,29 +57,52 @@ All verified live with hooks on the open/close/destructor slots:
   [church animation crash](./bugs/church-window-animation-crash.md).
 
 ## Window Class Family
-The window classes share their vtable layout. Two slots are load-bearing for modding:
+The window classes share their vtable layout: every window derives from the parchment
+widget `CDialogBG` (constructor `0x0041C320`, vtable `0x0066BC90`, 74 slots), itself a
+widget of the common base (`0x004B15F0`, vtable `0x006708D0`). The slots that matter for
+modding:
 
 |Vtable slot|Method|
 |-|-|
-|`+0x118`|close: deregister from the window manager, hide|
-|`+0x120`|open: register with the window manager, build/populate the widgets|
+|`+0x8`|load the window's ini section - pure virtual in the base|
+|`+0x18`|event handler `(point*, type)`, `ret 8` - see [Windows and Widgets](./ui/windows-and-widgets.md#input)|
+|`+0x9C`|draw `(context, x, y, z)`, `ret 0x10` - called by the scene container each frame|
+|`+0xC8`|is visible (base: byte `+0x48`)|
+|`+0xCC`|show/hide `(bool)`|
+|`+0xF4`|per-frame update - called by the scene container while visible|
+|`+0x118`|close: leave the [open-window list](#the-open-window-list), free the tile map|
+|`+0x11C`|may I close? `-> bool` (base `0x00602980`: always yes)|
+|`+0x120`|open: join the open-window list (base `0x00462390`), build/populate the widgets|
+|`+0x124`|per-frame call from the open-window list driver - pure virtual in the base|
 
-Verified for the trading office window, the town hall window and the goods dialog
-(base class vtable `0x0066BC90`, base open `0x00462390`). Hooking these slots is the
-established way to track a window's open state (used by
-`mod-trading-office-prices-synchronization` and `mod-auto-supply`).
+Verified for the trading office window, the town hall window, the goods dialog, the
+tavern window and the ship overview. Hooking `+0x118`/`+0x120` is the established way
+to track a window's open state (`mod-trading-office-prices-synchronization`,
+`mod-trading-qol`); `mod-tavern-details` hooks `+0x18` for header clicks. The slot table
+for a class starts at its vtable, so a slot of one window is patched without touching
+the others. [Windows and Widgets](./ui/windows-and-widgets.md) has the field layout, the
+drawing contract and how to build a window of your own.
 
 ## Window Manager
-A singleton at `0x006DA5F0` (also reachable through `0x004B9730`) tracks the open
-windows in two containers.
+A singleton at `0x006DA5F0` holds the **window stack**; the scene on top of it is a
+widget container whose children are the building windows, dialogs and every one of
+their sub-widgets.
 
-The registration list (`this+0xC0`): `0x004B4E30` registers a window, `0x004B4EB0`
-deregisters it. Windows register their embedded sub-windows too. Calling a window's
-open method on an already-open window registers it twice - it then draws twice and
-needs two closes - so programmatic refreshes must not re-run open (see
+`0x004B9730(this = 0x006DA5F0)` returns the top scene's object (`[[+0xC]+0x8]`, or 0
+with an empty stack). That object is the container: its children sit in an array at
+`+0x94` (16-byte entries `{object, x, y, z}`, count `+0xC0`), `0x004B4E30(child)`
+appends one - taking the offsets from the child's `+0x84` rect - and `0x004B4EB0(child)`
+removes one (a no-op when absent). Each frame the container calls every visible child's
+update `+0xF4` (loop at `0x004B6E80`) and draw `+0x9C` (loop at `0x004B597D`) **in
+array order**, and its input dispatcher gives a click to the topmost child under the
+cursor, so a widget registered after a window draws above it and receives the clicks
+inside it. Windows register their sub-widgets right after themselves; the ship
+overview's build (`0x004751D0`) adds itself, then its buttons and both list scrollbars.
+Calling a window's open method on an already-open window registers it twice - it then
+draws twice and needs two closes - so programmatic refreshes must not re-run open (see
 [Trading Office Window](./ui/trading-office-window.md) for the working alternative).
 
-The **window stack** (an MFC-style list at `this+0x4`): `+0xC` points at the TOP
+The stack itself (an MFC-style list at `this+0x4`): `+0xC` points at the TOP
 node, `+0x10` holds the depth, and each node is `{+0x4: link toward the bottom,
 +0x8: the window object}`. Windows enter through the push method
 `0x004B90E0(window, arg)` (activates via vtable `+0xD4`/`+0x15C`, inserts the node
@@ -105,6 +128,30 @@ looking at" is therefore a read of the top node. The game also calls the remove
 method defensively on windows that are not on the stack - the session init runs a
 whole batch of such no-op removes - so a remove is not proof the window was ever
 pushed.
+
+## The Open-Window List
+Which building windows and dialogs are open is tracked separately, in an MFC
+`CPtrList` at `0x006CC3B4` (head node `0x006CC3B8`, tail node `0x006CC3BC` = the
+topmost, count `0x006CC3C0`; a node is `{+0x0 next, +0x8 window}`). The base open
+`0x00462390` appends the window and re-posts the mouse position over its rect; the base
+close `0x0041CCF0` calls `0x00462320`, which submits the window's rect and removes it.
+
+|Function|Signature|What|
+|-|-|-|
+|`0x004621F0`|cdecl()|per-frame driver: for `i = count-1 .. 0`, call that window's vtable `+0x124`|
+|`0x00462230`|cdecl() -> bool|close the topmost window: `+0x11C` veto, then `+0x118`; on veto plays the refusal sound `0x1F41`|
+|`0x00462280`|cdecl(bool force) -> bool|close every open window, same veto unless forced|
+|`0x00462310`|cdecl() -> bool|is any window open|
+|`0x00462410`|cdecl() -> window*|the topmost open window|
+|`0x00462390`|thiscall|show: append (the base open)|
+|`0x00462320`|thiscall|remove, submitting the window's rect first|
+
+The driver has exactly two callers, both scene draw methods - the local map's
+(`0x005888FC`) and the scrollmap's (`0x0044AC04`) - which is what makes a window in this
+list scene-independent: the ship overview opens on the world map and in a town alike.
+Dismissal is centralised on the list too: ESC (`0x004247DA`) and right-click
+(`0x004298F0`) call `0x00462230` when `0x00462310` says something is open, and a window
+opening closes the others with `0x00462280(0)` first.
 
 ## The Local Map Scene
 One window object serves both the town view and the sea battle - what differs is
@@ -181,16 +228,28 @@ Only the church and tavern windows drive the player. A byte at
 `[[0x006CC3E8]+0x24]` gates the animation paths in both (checked by the church tick
 and the player's draw); with it clear, none of this runs.
 
+The interior picture the characters are drawn on, the whitening veil over it, the chains
+and the wooden frame belong to a different shared object, the
+[building backdrop](./ui/building-backdrop.md).
+
 ## Window Titles
-`0x00420C70` (stdcall, arguments: a string object and the window) draws a window's
-title banner. It fetches graphic `0x791E` from the resource manager at `0x006DA820`
+`0x00420C70` (arguments: a string object and the window) draws a window's title banner.
+It takes the string **by value and destroys it** before returning (`0x00420DBF` runs the
+destructor `0x0064F253` on it), so a caller must construct a fresh string for every
+call; handing it the same one twice frees it twice and corrupts the heap. It fetches graphic `0x791E` from the resource manager at `0x006DA820`
 (`0x004B3DD0`), takes the four dwords of its rect and renders it together with the
 text. Pages that show no title simply never call it, which leaves the strip at the
 top of the window free - `mod-tavern-details` uses it for table rows.
 
 ## Submitting Screen Areas
-`0x004B9650` takes one argument by stdcall: a pointer to four dwords - left, top,
-right, bottom. It returns without doing anything while `[0x006DCB94]` is non-zero,
+The renderer repaints **dirty rectangles only**, and every draw is clipped to them: a
+draw method begins with `0x004BB7C0(rect*)` (cdecl, returns 0 when the rect misses the
+dirty region, in which case the method returns without drawing), so content that
+changes without a submitted rect repaints in slivers or not at all.
+
+`0x004B9650` submits a rect. It is thiscall on the window stack singleton
+(`ecx = 0x006DA5F0`) with one stack argument, `ret 4`: a pointer to four dwords - left,
+top, right, bottom. It returns without doing anything while `[0x006DCB94]` is non-zero,
 or when the rect's width or height is zero. Otherwise it iterates the pointer array
 at `0x006DCD20` (`[0x00670F6C]` entries), passing each entry to `0x004BB780` and the
 rect to `0x004BB140` - both trampolines into `ddraw_Dll`. The function takes no
@@ -393,11 +452,27 @@ Three of these icons are also reachable as [markup](#markup) escapes - `\C`, `\L
 layout measures it and flows the text around it. A blit is absolutely positioned.
 
 ## Number Widgets
-The numeric row widgets (amounts, prices) cache their displayed value and text. The
-setter at `0x0045C930` (thiscall, one argument) clamps the value to the widget's
-bounds at `+0x180`/`+0x184`, stores it at `+0x188`, flags `+0x18C` dirty and rewrites
-the label text. In-place writes to the underlying data are invisible until either this
-setter runs or the owning window repopulates.
+The numeric input boxes (the trading office's amount and price columns, the goods dialog's
+amounts) are a subclass of the text widget (constructor `0x004C9790`, vtable `0x00671890`):
+constructor `0x0045C110`, vtable `0x0066DBB8`, `0x190` bytes. They cache their displayed
+value and text: the setter at `0x0045C930` (thiscall, one argument) clamps the value to the
+bounds at `+0x180` (max) / `+0x184` (min), stores it at `+0x188`, flags `+0x18C` dirty and
+rewrites the label text. In-place writes to the underlying data are invisible until either
+this setter runs or the owning window repopulates.
+
+The box takes the keyboard while it is the scene's focused child (byte `+0x42`, set and
+cleared by the focus callbacks - see [Windows and Widgets](./ui/windows-and-widgets.md#input)).
+Its key handler, vtable `+0x1C` = `0x0045C300(vk, repeat, flags)`, returns at once unless
+`+0x42` is set; otherwise it marks `+0x18C`, translates the virtual key to a character
+(`0x004C0F50`), accepts only `'0'`..`'9'` (`0x0045C6C2`) besides backspace and delete,
+edits the text at the cursor (`+0x168`) and stores `atoi(text)` in `+0x188`
+(`0x0045C908`). Losing focus (`0x0045C230`) strips leading zeros.
+
+The box does not commit anything itself. Its window reads `+0x188`: the trading office's
+page update enqueues an order change every frame for a row whose amount or price box is
+focused (see [Trading Office Window](./ui/trading-office-window.md#typing-and-the-per-frame-commit)),
+so writing a focused box's value through the setter changes the order exactly as typing
+would - which is how `mod-trading-qol`'s Q..Y keys reprice one ware.
 
 ## String Objects
 Several game functions take an MFC-style string object instead of a plain C string: a
@@ -405,8 +480,12 @@ single pointer to character data whose header (refcount, allocated size, length)
 in the 12 bytes before the data. Passing a raw `char*` to such a function crashes -
 the callee dereferences the characters as a pointer.
 
-- construct/assign from a C string: `0x0064F390` (thiscall(this, char*))
+- construct from a C string: `0x0064F2C1` (thiscall(this, char*)); assign:
+  `0x0064F390` (thiscall(this, char*))
 - destruct: `0x0064F253` (thiscall(this))
+- **by-value arguments are destroyed by the callee** (MSVC convention): the title
+  renderer `0x00420C70` and the ini loaders such as the scrollbar's `0x00460B70` release
+  the string they are handed, so build a fresh one for every call
 - `[0x006C7CCC]`/`[0x006C7CD0]` hold the shared empty-string sentinel; a fresh object
   should be initialized to `[0x006C7CD0] + 0xC` so the constructor's release-old-data
   path is a no-op.

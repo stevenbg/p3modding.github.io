@@ -96,10 +96,22 @@ risen looks like `rich +4, wealthy +4, poor -8` - the poor pool being the reserv
 two draw from.
 
 ### Dwelling Capacity
-`town + 0x2F8` holds a capacity per class, and it bounds promotion: the levels calculation
-clamps each class's target to it. Across all 24 towns the values share a greatest common
-divisor of **20** - observed values run 320, 560, 640, 720, 800, 1120, 1400, 1540, 1680,
-1820, 2800, 3360, 3640, 3920 and 4200 - so capacity is granted in units of 20 people.
+`town + 0x2F8` holds a capacity per class - u16 rich at `+0x2F8`, wealthy `+0x2FA`, poor
+`+0x2FC` - and it bounds promotion: the levels calculation clamps each class's target to
+it. Across all 24 towns the values share a greatest common divisor of **20** - observed
+values run 320, 560, 640, 720, 800, 1120, 1400, 1540, 1680, 1820, 2800, 3360, 3640, 3920
+and 4200 - so capacity is granted in units of 20 people.
+
+The capacity is the sum of the class's houses, whoever owns them: a house holds a fixed
+number per class, the word table at **`0x00672A18`** - rich (merchants' house) 80, wealthy
+(gabled house) 140, poor (half-timbered house) 280 - and the house info panel derives the
+"All dwellings in this town" house count as `capacity / per_house` (`0x005B0298`). The
+occupants it sets against that capacity are the residents of the town-owned houses, u16
+`town + 0x778`/`+0x77A`/`+0x77C` (rich, wealthy, poor), plus the residents of every
+merchant's houses, `office + 0x2DE`/`+0x2E0`/`+0x2E2` (see [Trading
+Office](../merchants/trading-office.md)), summed over the merchants with an office in the
+town (`0x005B0250`..`0x005B0370`); the percentage the panel prints is `occupants * 100 /
+capacity`, and a class with capacity 0 is left out.
 
 ## Beggars
 Beggars sit outside the jobs identity and have their own equilibrium, maintained by

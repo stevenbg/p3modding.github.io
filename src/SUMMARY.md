@@ -21,6 +21,7 @@
     - [Buy Militia Weapons](./operations/0050-buy-militia-weapons.md)
     - [Tavern Interaction](./operations/0052-tavern-interaction.md)
     - [Office Autotrade Setting Change](./operations/005b-office-autotrade-setting-change.md)
+    - [Employ or Dismiss Administrator](./operations/005e-employ-administrator.md)
     - [Office Autotrade Lock Change](./operations/0066-office-autotrade-lock-change.md)
     - [Administrator Skill Gain](./operations/0067-administrator-skill-gain.md)
     - [Set Trade Route Active](./operations/0068-set-trade-route-active.md)
@@ -30,6 +31,7 @@
     - [Advance Time](./operations/00c4-advance-time.md)
     - [Set Game Speed](./operations/00c8-set-game-speed.md)
 - [Scheduled Tasks](./scheduled-tasks.md)
+    - [Mayor Election](./scheduled-tasks/0002-mayor-election.md)
     - [Ten-Day Update](./scheduled-tasks/0003-ten-day-update.md)
     - [Criminal Investigation](./scheduled-tasks/0005-criminal-investigation.md)
     - [Update Shipyard Experience](./scheduled-tasks/0006-update-shipyard-experience.md)
@@ -124,11 +126,17 @@
     - [Isometric Tiles (.let)](./file-formats/let.md)
     - [Tile Groups (.lgr)](./file-formats/lgr.md)
     - [AIM Images (.aim)](./file-formats/aim.md)
+    - [Mission Scripts (.p2m)](./file-formats/p2m.md)
     - [Won Game Record (.eld)](./file-formats/eld.md)
 
 # Interface
 
 - [UI](./ui.md)
+    - [Windows and Widgets](./ui/windows-and-widgets.md)
+    - [Scrollbar](./ui/scrollbar.md)
+    - [Buttons](./ui/buttons.md)
+    - [Image Widget](./ui/image-widget.md)
+    - [Building Backdrop](./ui/building-backdrop.md)
     - [Trading Office Window](./ui/trading-office-window.md)
     - [Auto Trade Goods Dialog](./ui/auto-trade-goods-dialog.md)
     - [Ship Panel](./ui/ship-panel.md)

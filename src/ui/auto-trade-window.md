@@ -33,4 +33,6 @@ scrolling does not re-run the populate, which takes no scroll offset, and the in
 handlers index the row arrays directly by row position (e.g. `0x0048C58F` reading
 `[edx+esi+0x6ABC]`). Raising the limit would therefore mean either growing the window
 object - shifting some 200 hardcoded member offsets that live above the arrays - or
-virtualising the rows and remapping every handler.
+virtualising the rows and remapping every handler. The bar itself is the game's
+[`CP2Scrollbar`](./scrollbar.md); this window is one of the parents that draws it by hand
+through the composite draw rather than registering it as a container child.

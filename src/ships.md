@@ -148,6 +148,10 @@ base[ship_type & 3]                                    // 693, 693, 578, 578 at 
 - **Damage** costs up to about 35%, and the clamp means anything above roughly 80% of
   maximum health gives the full term - which is also the threshold at which a damaged
   pirate breaks off and sails home.
+- **Crew size has no effect.** None of the five functions that read a base-speed table
+  (this one, the route-time formula `0x005169C0`, the ship mover `0x00516CC0`,
+  `0x00516AB0`, `0x005170F0`) reads the crew word `ship+0x40` or the crew tables. Sailors
+  above the full-crew count cost hold space instead - see [Crew](./ships/crew.md).
 - The **captain's navigation skill** is worth up to +10% (skill 255), and it scales with the
   raw byte rather than the displayed step: a captain the panel shows as 5 holds at least 250,
   worth +9.8%, and each displayed step of 50 points is +2%. A ship with **no** captain

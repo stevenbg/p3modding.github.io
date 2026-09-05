@@ -111,6 +111,10 @@ packed string block at `0x006A5688`. That is the id space the mask setter below 
 its `cmp al,0x30` (`0x0052190B`), and the construction pass bounds at `0x37`/`0x38`, so the
 table is indexed exactly as the code indexes it - no alignment guess needed.
 
+The same id indexes the **work table at `0x00672BB4`**, one byte per building: the
+workforce units a site of that building takes to complete, written into the site record
+when it is placed and paid down by the [construction pass](../towns/construction.md).
+
 It names the low ids too, and **two of them are unique structures as well**, sitting outside
 the `0x1E`..`0x2F` block:
 

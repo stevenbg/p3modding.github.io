@@ -10,7 +10,7 @@ The array hangs off the town, stride 8 bytes per site:
 |-|-|
 |`town + 0x75C`|array base pointer|
 |`town + 0x760`|freelist head - finished sites are pushed back here|
-|`town + 0x762`|u16 walk cursor|
+|`town + 0x762`|u16 head of the **pending chain**: the sites still being built, linked through their `+0x4`, ended by an index at or past the bound. The daily pass walks exactly this chain|
 |`town + 0x764`, `town + 0x768`|chains of completed town-owned structures|
 |`town + 0x776`|u16 array bound|
 |`town + 0x7AC`|map stride, used as `x * stride + y`|
@@ -25,7 +25,7 @@ A site is:
 |`+0x2`|owning merchant index; a value at or above the merchant count `[0x006DE4AA]` means the town owns it|
 |`+0x3`|[building id](../reference/buildings.md), `1`..`0x38`|
 |`+0x4`|u16 next-site index - chain or freelist link|
-|`+0x6`|stage byte, capped at `5`|
+|`+0x6`|**work left**, in workforce units. Placement writes the building's total from the byte table at `0x00672BB4` (indexed by building id, `0x00523CC5`); the daily pass pays it down and completes the site when the remainder fits (below). The pass hands the map renderer `total - left` and `total` for the site's progress picture (`0x005204B7`)|
 
 ## The Workforce Is a Daily Budget
 Facility type `0x02` exists in all 24 towns and produces no ware. Its only job is this list:
@@ -34,17 +34,39 @@ the sites and advances each one it can afford:
 
 ```
 budget = employees                      ; 0x0051FFA0, loaded once
-for each site in the list:
-    if site.stage > 5:       skip       ; 0x00520031
-    if site.stage > budget:  skip       ; 0x00520041
-    advance the site
-    budget -= site.stage                ; 0x00520078
+for each site in the pending chain:
+    if site.left <= 5 and site.left <= budget:
+        complete the site               ; unlink, left = 0, budget -= left, dispatch by id
+    else:
+        pay = min(budget, 5)            ; 0x00520479..0x00520493
+        site.left -= pay
+        budget -= pay
+    stop when budget is 0
 ```
 
 The employee count is **spent**, not compared: `ebx` is loaded once before the walk and never
-reloaded inside it, so one tick advances as many sites as the budget covers. A 25-worker town
-can push 25 sites from stage 1 to 2, but only five from stage 5 to completion, and the sites
-it could not afford wait for tomorrow.
+reloaded inside it, so one tick pays into as many sites as the budget covers, five units at
+most per site per day. A 25-worker town works five sites a day; the sites it could not
+afford wait for tomorrow, in chain order.
+
+## Remaining Building Time
+The building info panels print the game's own estimate, `0x0051D6F0(town, site_index) ->
+i32` (thiscall, `ret 4`; callers `0x005A881B`, `0x005B0234`, `0x00500A3E`). It walks the
+pending chain to the site, letting each site ahead take `min(budget, 5)` of today's budget
+(`town + 0x864`, the workforce facility's employees). If the budget is gone before the site
+it returns a **negative** number: `-1` for the first unfunded site, `-n` for the n-th; the
+panel prints "Building will start soon" for `-1`, "This building is in position n. in the
+order for completion" for the rest (`0x005A0FBA` negates it), and nothing at or below
+`-1000`. Otherwise it returns `ceil(left / min(budget, 5))`, then `0x0052DFF0(town_index,
+days)` subtracts one if this town's daily pass has already run today: towns are processed
+at staggered ticks, `town_index * 8 + 7` of the 256-tick day (`- 253` from `0x100` up),
+compared against the time of day `[0x006DE4B4] & 0xFF`. A site with no work left returns
+`0`, an index past the bound `0x10000000`. Site records resolve through `0x0051F1F0(town,
+index)` = `[town + 0x75C] + 8 * index`, 0 past the bound. While town flag `+0x2C8 & 0x10` is
+set (the bit that also suspends [imports](./production.md#imports-from-outside-the-hanse)),
+a site whose id is above `0x30` (`0x31` for one merely ahead in the chain) or whose map tile
+`[town + 0x80C][x * [town + 0x7AC] + y]` is below `0x80` is passed over without taking
+budget, and asked about it the routine returns `-1` outright (`0x0051D76A`..`0x0051D808`).
 
 With no employees the routine returns immediately and nothing is built at all.
 

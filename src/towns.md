@@ -208,15 +208,15 @@ The following fields have been identified:
 000006D0 field_6D0 dd ?
 000006D4 field_6D4 dd ?
 000006D8 field_6D8 dd ?
-000006DC field_6DC dd ?
+000006DC field_6DC_bribed_councillor_merchant_ids dd ?
 000006E0 field_6E0 dd ?
-000006E4 field_6E4 dd ?
+000006E4 field_6E4_notable_ranks dd ?
 000006E8 field_6E8 dd ?
 000006EC field_6EC dd ?
 000006F0 field_6F0 db ?
 000006F1 field_6F1_mayor_id db ?
 000006F2 field_6F2 db ?
-000006F3 field_6F3 db ?
+000006F3 field_6F3_mayor_consecutive_terms db ?
 000006F4 field_6F4_recent_extra_taxes_amount dd ?
 000006F8 field_6F8_head_tax_rate_and_extra_tax_timestamp dd ?
 000006FC field_6FC dd ?
@@ -294,7 +294,7 @@ The following fields have been identified:
 000009A8 field_9A8 dd ?
 000009AC field_9AC dd ?
 000009B0 field_9B0 dd ?
-000009B4 field_9B4 dd ?
+000009B4 field_9B4_import_list dd ? ; head of the singly linked list of 0x14-byte import records (skins, wine, salt from outside the Hanse) - see Production, "Imports From Outside the Hanse"
 000009B8 field_9B8 dd ?
 000009BC field_9BC dd ?
 000009C0 field_9C0 dd ?

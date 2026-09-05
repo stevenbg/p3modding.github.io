@@ -28,5 +28,7 @@ can be bought over (the write is unconditional; the last briber wins).
 
 Standing bribes survive until they are consumed by a
 [verdict](../scheduled-tasks/0005-criminal-investigation.md#verdict) (two per certain
-acquittal), burned by a failed bribe, overwritten by a rival, or wiped world-wide by
-the annual [alderman election](../scheduled-tasks/0020-alderman-election.md).
+acquittal), spent in the town's [mayor election](../scheduled-tasks/0002-mayor-election.md)
+(3 votes each, when the briber is on the ballot), burned by a failed bribe, overwritten by
+a rival, or wiped world-wide by the annual
+[alderman election](../scheduled-tasks/0020-alderman-election.md).

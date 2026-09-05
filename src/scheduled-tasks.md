@@ -46,7 +46,7 @@ names; a few do their work inline in the dispatcher instead.
 |-|-|-|
 |`0x00`|`0x004DB330`||
 |`0x01`|`0x004DB4E0`|Debt Repayment|
-|`0x02`|`0x004DBB00`||
+|`0x02`|`0x004DBB00`|[Mayor Election](./scheduled-tasks/0002-mayor-election.md)|
 |`0x03`|`0x004DDA40`|[Ten-Day Update](./scheduled-tasks/0003-ten-day-update.md)|
 |`0x04`|`0x004DFC94`||
 |`0x05`|`0x004E5B84`|[Crime Investigation Result](./scheduled-tasks/0005-criminal-investigation.md)|

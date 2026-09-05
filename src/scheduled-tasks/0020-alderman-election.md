@@ -20,7 +20,8 @@ of phases across a single day:
 
 ## The finale
 
-- The winner resolves to a **town** - whose mayor (`town + 0x6F1`) becomes the new
+- The winner resolves to a **town** - whose [mayor](./0002-mayor-election.md)
+  (`town + 0x6F1`) becomes the new
   alderman - or, `0x80`-flagged, to a merchant via his hometown. The alderman index is
   written to `[0x006DE52D]` and his town to `[0x006DE52E]` (`0x004DC11C`,
   `0x004DBFBB`/`0x004DBFCC`); if the resolved mayor is invalid the old alderman stays.

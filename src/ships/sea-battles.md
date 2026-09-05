@@ -187,6 +187,50 @@ against the player merchant `[0x006DFC14]` and toggles **`[0x006E59CC]`**, the b
 is attached to: `0x0060FF1E` sets it from `battle+0x662`, `0x0060FF0F` clears it to `0xFF` for
 none.
 
+## Boarding and Melee
+
+When two ships grapple - flag `0x08` on their `+0x12A` - the per-ship AI step `0x0061F1BF`
+resolves the fight by **attrition**: every tick each ship inflicts casualties on the other
+in proportion to its own **strength** against the other's, and when one side's crew is
+emptied the winner captures it (its crew is set to `1` and the takeover routine
+`0x0060C1C9` runs). There is no single "who wins" comparison - a lopsided fight is over
+fast, a close one is bloody on both sides, and the per-tick rolls add noise.
+
+Each ship's strength (`0x0061F347`, mirrored for its partner at `0x0061F447`):
+
+```
+crew_eff       = crew + (1 if a captain is aboard)          ; crew = ship+0x40
+boarding_power = crew_eff + min(cutlasses, crew_eff)        ; cutlasses = ship+0x154
+base           = ((morale_level + 18) * boarding_power + 10) / 20
+strength       = base * (100 + captain_combat * 6 / 17) / 100   ; only with a captain aboard
+```
+
+The four things that decide it:
+
+- **Crew count** is the backbone - `boarding_power` is linear in it. Two unarmed,
+  captainless ships reduce to `strength = 18 * crew / 20`, so there the **larger crew
+  wins**, nearly deterministically. That is the common trader-vs-trader case.
+- **Cutlasses** (`ship+0x154`): each one lets a sailor count **double** in
+  `boarding_power`, capped at one per sailor. A ship carrying at least as many cutlasses
+  as crew fights at twice its crew; with none, at face value.
+- **The captain's combat skill** (the captain record's combat byte `+0xB`, raw `0`..`255`;
+  the tavern offer panel shows `raw / 50`) is a **multiplier** - `1 + 0.00353 * raw`, so up
+  to about **1.9x at 255**, roughly **+18% per displayed level** (`combat * 6 / 17` at
+  `0x0061F41C`..`0x0061F428`, the `0x78787879` magic being the divide by 17). It applies only when a captain is aboard - which is also where the
+  `+1` crew and the morale bonus come from.
+- **Crew [morale](./crew.md#crew-morale)** enters as `morale_level + 18`, where
+  `morale_level` is the morale high byte (`ship+0x3F`) clamped to `0`..`4`. A rested crew
+  (level 4) boards at `(4 + 18)` against a spent crew's `(0 + 18)` - about **+22%** at full
+  morale.
+
+For a **human**-owned ship the base term also takes a difficulty swing: `+2` when the
+combat-difficulty stepper `[0x006CC3E8]+0x12` is `0` (the two easiest presets), `-2` when it
+is `2` (the hardest), nothing in between (`0x0061F3B8`).
+
+So a much smaller crew can still win: 20 sailors with 20 cutlasses under a skilled captain
+outfight 30 bare crew comfortably. "Most sailors wins" is only the special case of two
+unarmed, unofficered ships.
+
 ## The Battle Report Letter
 
 The "Naval battle" letter is built by vtable slot 7, `0x0060D299`, and arrives **only for

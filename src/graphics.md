@@ -48,12 +48,35 @@ executable calls. This is how the drawing helpers used elsewhere in this book re
 |`0x004BB9B0`|`sgl_SetRenderDest`|
 |`0x004BB9C0`|`sgl_SetRenderSource`|
 |`0x004BBA10`|`sgl_SetTextMode`|
+|`0x004BBA80`|`sgl_StretchBitmapRect`|
 |`0x004BBB20`|`sgl_GetTextureInfo`|
 
 Reading the table is the reliable way to name any of the ~180 drawing calls in
 the executable, and the same walk recovers the slot a mod can hook to intercept
 one (see [Graphics and Icons](./ui.md#graphics-and-icons) for the blit sequence
 these are used in).
+
+### Blits Do Not Clip to the Texture
+
+`sgl_DrawBitmapRect(src_x, src_y, x, y, width, height)` copies exactly the rectangle it
+is given out of the selected texture, one pixel to one. It does not check the source
+against the texture's size: a rectangle wider than the texture still lands inside the
+row pitch and merely shows the padding, but one that runs below the last row reads off
+the end of the pixel buffer and crashes inside `ddraw_Dll` (the
+[backdrop](./ui/building-backdrop.md)'s veil does this when the backdrop is made taller
+than 537). A caller that needs a larger area either repeats the texture in pieces or uses
+the scaled blit.
+
+`sgl_StretchBitmapRect` takes eight arguments, in this order:
+`(src_x, src_y, dst_x, dst_y, src_width, src_height, dst_width, dst_height)`, and scales
+the source rectangle onto the destination one, modulated by the constant colour like the
+plain blit. The order comes from the game's own uses: the minimap builder at `0x004B1463`
+copies a whole measured texture into a memory texture of a different size as
+`(0, 0, 0, 0, tex_w, tex_h, dst_w, dst_h)`, and `0x004B27B5` stretches from `(0, 0)` onto
+a destination rectangle. The library also exports what a mod would need to build textures
+of its own - `sgl_CreateMemoryTexture`, `sgl_LoadMemoryTexture` and `sgl_LockTexture` are
+bound by the executable too (slots `0x006DAA4C`, `0x006DA990`, `0x006DA85C`), and
+`sgl_UnlockTexture` is exported; their signatures are not traced.
 
 ## The Decoded Image Cache
 

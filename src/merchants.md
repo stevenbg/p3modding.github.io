@@ -115,13 +115,13 @@ distinct from the birth town shown in the same screen's date-of-birth line.
 000000E8     char *field_E8_name;
 000000EC     int field_EC;
 000000F0     unsigned __int8 field_F0_sailor_pools[40];
-00000118     int field_118;
+00000118     int field_118_candidature;
 0000011C     class25 field_11C_local_reputation_components[40];
 000002FC     float field_2FC_latest_reputations[40];
 0000039C     unsigned __int8 field_39C_ranks[40];
 000003C4     float field_3C4_old_reputations[40];
 00000464     float field_464_base_rep_factor;
-00000468     int field_468;
+00000468     int field_468_guild_membership_bitmap;
 0000046C     int field_46C_company_value;
 00000470     int field_470_company_capacity;
 00000474     int field_474;

@@ -15,6 +15,7 @@ office-specific fields after it. The whole record is `0x44C` bytes.
 |`0x2D0`|u16|the same, for the merchant's finished dwellings - the nine dwelling building ids, linked at `0x005200F0`|
 |`0x2D2`|u16|business buildings the merchant owns in this town - one per building, verified across several saves and offices. Counted in a loop over the town's buildings (`0x004FFDD9`, `0x004FFE5A`) and added to the administrator's [wage](../auto-traders.md#wages) wherever the interface shows it|
 |`0x2D6`|u16|state flags; bit `0x1` means the office holds administrator orders|
+|`0x2DE`, `0x2E0`, `0x2E2`|u16 x3|residents of the merchant's houses in this town - rich, wealthy, poor. The house info panel's "All dwellings in this town" adds every office's three words to the town's own (`town + 0x778`..`+0x77C`) for the occupants figure (`0x005B02AE`..`0x005B02D9`)|
 |`0x2F2`|u16|the administrator, as an index into the [auto trader](../auto-traders.md) array; out of range when the office has none|
 |`0x2F4`|i32[24]|administrator order price per ware, the sign encoding the direction|
 |`0x354`|i32[24]|administrator minimum store quantity per ware, raw units|

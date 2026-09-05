@@ -17,7 +17,9 @@ reputation = max(0,
 ```
 
 ## Outrigger
-If the merchant is providing the town's outrigger, `outrigger_rep` is set to `1`.
+If the merchant is providing the town's outrigger, `outrigger_rep` is set to `1`: the loop at
+`0x004F7F50` checks every town's outrigger ship (`town + 0x994`) for his ownership
+(`ship + 0`) and adds `1.0` (`0x004F7F87`) to **that town's** figure only.
 
 ## Tenants
 The reputation achieved through tenants is calculated as follows:
@@ -41,8 +43,21 @@ The `rent_reputation_factors` table is at `0x00672DF0`:
 |High|0.23|
 |Very High|0.0|
 
+The term is **local**: the office loop at `0x004F7FBE` walks the merchant's
+[offices](./trading-office.md) (head `merchant + 0xC`, next `office + 0x2C8`) and credits
+each office's residents (`office + 0x2DE/0x2E0/0x2E2`, rent levels at `office + 0x2E4..0x2E6`)
+to the town of that office (`office + 0x2C6`), at `0x004F8002`..`0x004F8032`.
+
 ## Employment
-TODO
+The people working in the merchant's businesses, also local to the town they work in. In
+the same office loop, each office's production records (head `office + 0x2CC`, next
+`record + 0x8`, bounded by `[0x006DE4A6]`) add
+
+```
+employment_rep += employees * 0.01    # record + 0x4, constant at 0x00672838
+```
+
+to the office's town (`0x004F8083`), so unstaffed businesses add nothing here.
 
 ## Capacity
 The merchant's cargo capacity reputation is calculated as follows:

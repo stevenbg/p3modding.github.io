@@ -330,20 +330,76 @@ slots 4..20, bit n-4:                     17 iterations, 0x00545912
     ineffective & bit    ->  768
     neither              ->    0
 bit 0x20000              -> whaling, into town+0x2CC rather than a slot
-bit 0x40000              -> calls 0x005462F0(4); unidentified
+bit 0x40000              -> 0x005462F0(4):    an import source for skins
+bit 0x80000              -> 0x005462F0(0x10): an import source for wine
+bit 0x100000             -> 0x005462F0(0xD):  an import source for salt
+bit 0x200000             -> town+0x2C8 |= 0x8000000; unidentified
 ```
 
 Bit `n` therefore means facility type `n + 4`, the first ware producer being HuntingLodge at
 `0x04`, and the walk is literally 17 iterations of stride `0x10` from `town + 0x888` with a
 mask that doubles each pass, the four municipal slots having been written just before at
-`0x005458EF`. Four bits past the end of that range are not facilities: `0x20000` is
-[whaling](#whale-oil-has-no-facility), and `0x40000`, `0x80000` and `0x100000` each call
-`0x005462F0` with a different small integer - `4`, `0x10` and `0xD` - at `0x00545997`,
-`0x005459B0` and `0x005459C9`. What that routine does with them is unidentified. Both bitmaps
+`0x005458EF`. Five bits past the end of that range are not facilities: `0x20000` is
+[whaling](#whale-oil-has-no-facility); `0x40000`, `0x80000` and `0x100000` make the town an
+[import source](#imports-from-outside-the-hanse) for the primary ware of facility type `4`,
+`0x10` and `0xD` (`0x00545997`, `0x005459B0`, `0x005459C9`); `0x200000` sets bit `0x8000000`
+of the town flags at `+0x2C8` (`0x005459EC`), whose meaning is not known. Both bitmaps
 arrive in a 16-byte town record - effective at `+0x4`, ineffective at
 `+0x8`, town index at `+0xE` - handed to the create-a-town routine `0x00531D50`, which also
 grows the towns array, runs per-town setup `0x00545CB0` and spawns the town's
 [captain and pirate](../auto-traders.md#captain-and-pirate-spawning).
+
+## Imports From Outside the Hanse
+Skins, wine and salt reach the map from beyond it. A town whose production word carries the
+matching bit above owns an **import record** for the ware, kept on a singly linked list at
+**`town + 0x9B4`**, and every day that record puts goods straight into the town's market.
+
+`0x005462F0(town, type)` (thiscall, one argument, types `0x04`..`0x14` only) mallocs the
+`0x14`-byte record (constructor `0x0050FCA0`), pushes it on the list, and initialises it
+through `0x0050FE00(capacity, town index, type)`. The loader rebuilds the same records from
+the savegame (`0x0054250B`..`0x00542522`), and the town constructor and destructor own the list
+(`0x0051B13E`..).
+
+|Offset|Type|Meaning|
+|-|-|-|
+|`+0x0`|ptr|next record|
+|`+0x4`|i32|today's imported amount, raw units|
+|`+0x8`|i32|the Hanse-wide daily demand used today|
+|`+0xC`|u16|**capacity**, in 1/1024 of Hanse demand, capped at `0x400`|
+|`+0xE`|u16|**current rate**, same unit, ramping toward the capacity|
+|`+0x10`|u8|facility type; the ware is [`PRIMARY_WARE[type]`](../reference/facilities.md#which-ware-a-facility-produces) at `0x00672C2C`|
+|`+0x11`|u8|town index|
+|`+0x12`|u16|zeroed|
+
+The capacity is `0x400 / (towns * 3 / 16)`, scaled per ware - skins x200, wine x500, salt
+x140 - and shifted right by 10 (`0x0054634F`..`0x005463BC`). On the 24-town map that is 50,
+125 and 35: an import town can receive at most that many 1024ths of the whole Hanse's daily
+consumption of the ware.
+
+**Every day** `handle_town_tick` walks the list (`0x0051BCA8`, skipped while town flag
+`+0x2C8 & 0x10` is set) and runs `0x0050FE40` on each record:
+
+```
+D      = sum over every town of (business + citizen daily consumption of the ware)   ; 64-bit
+S      = this town's market stock of the ware
+T0..T2 = this town's price thresholds for the ware (town + 0x4F0 + ware*16)
+mid    = T0 + 3*(T1 - T0)/5
+f      = 1024 if S <= mid;  0 if S >= T2;  else (T2 - S) * 1024 / (T2 - mid)
+if f < rate:  rate = max(rate - 2, 4);         mult = max(f, 4)
+else:         rate = min(rate + 10, capacity);  mult = rate
+amount = D * mult >> 10                        ; D's low dword
+record+0x4 = amount;  record+0x8 = D;  town.stock[ware] += amount
+```
+
+So the import ramps up by 10 a day while the town's stock sits below about 60% of the way
+from T0 to T1. Past that point the delivery follows `f` directly - at once, not gradually -
+down to the floor of 4/1024 of Hanse demand once the stock reaches T2, while the stored rate
+only steps down by 2 a day, which is what a later ramp-up climbs from. It never stops
+entirely: both floor at 4. Two other readers: a statistics collector at `0x005313FD` sums
+`+0x4` per ware and adds `0x0050FFB0` = `D * rate >> 10` (64-bit; `0` below rate 1, plain
+`D` at rate `0x400`) into a second per-ware array, and the AI
+merchant task (`0x004DEBA0`, at `0x004DEE51`) walks a town's list to learn which ware it
+imports.
 
 For a settlement founded through an alderman mission the effective bitmap is built from the
 Hanse's shortages by `determine_new_settlement` (`0x00532E30`), using the
